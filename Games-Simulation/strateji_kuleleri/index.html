@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Strateji Kuleleri</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(15, 23, 42, 0.85);
+            --glass-border: rgba(96, 165, 250, 0.3);
+            --accent-blue: #60a5fa;
+            --accent-gold: #fbbf24;
+            --accent-red: #f87171;
+            --accent-green: #4ade80;
+            --neon-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Inter', sans-serif; 
+            background: #020617; 
+            color: white; 
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas { display: block; }
+
+        .ui-overlay { 
+            position: absolute; 
+            pointer-events: none; 
+            width: 100%; 
+            height: 100%; 
+            top: 0; 
+            left: 0; 
+            z-index: 20; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+
+        .interactive { pointer-events: auto; }
+
+        .glass { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Gösterişli Modal Stili */
+        .game-modal-content {
+            background: radial-gradient(circle at top left, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 1));
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 0 40px rgba(37, 99, 235, 0.2), inset 0 0 20px rgba(37, 99, 235, 0.1);
+        }
+
+        #orientation-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #020617;
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        @media (orientation: portrait) {
+            #orientation-warning { display: flex; }
+        }
+
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        #score-popup {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-gold);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 60;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+        }
+
+        #target-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 45;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #target-notification.active {
+            opacity: 1;
+            transform: translate(-50%, -60%);
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 5px; }
+        
+        .prime-badge {
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #451a03;
+            font-size: 10px;
+        }
+
+        /* Mobil Cihazlara Özel Dokunuşlar */
+        @media (max-width: 768px) {
+            .ui-overlay { padding: 0.75rem; }
+            .glass { border-radius: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop src="mp3/music.mp3"></audio>
+
+    <div id="orientation-warning">
+        <div class="w-20 h-20 border-4 border-blue-500 rounded-xl mb-6 animate-[spin_3s_linear_infinite] shadow-[0_0_20px_rgba(59,130,246,0.5)]"></div>
+        <h2 class="text-2xl font-bold mb-2 font-[Orbitron]">CIHAZI DÖNDÜRÜN</h2>
+        <p class="text-slate-400">En iyi oyun deneyimi için yatay konumu kullanın.</p>
+    </div>
+
+    <div id="target-notification">
+        <div class="glass px-10 py-5 border-2 border-blue-500/40 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+            <h3 class="text-blue-400 font-[Orbitron] text-3xl font-bold uppercase tracking-widest">HEDEF BELİRLENDİ</h3>
+            <p class="text-slate-300 text-lg mt-1 font-light italic">Diskleri altı parlayan kuleye taşıyın!</p>
+        </div>
+    </div>
+
+    <!-- Başlangıç Modalı - Mobil ve PC İçin Optimize Edilmiş Boyutlar -->
+    <div id="start-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 sm:p-6">
+        <div class="game-modal-content p-6 sm:p-8 max-w-xl w-full max-h-[92vh] rounded-[1.5rem] sm:rounded-[2rem] flex flex-col interactive border-2 border-blue-500/50">
+            <div class="mb-4 sm:mb-6 text-center shrink-0">
+                <h1 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 font-[Orbitron] tracking-tighter drop-shadow-[0_0_15px_rgba(96,165,250,0.5)] uppercase">STRATEJİ KULELERİ</h1>
+                <div class="h-1 w-16 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-2 mb-5 sm:mb-6 space-y-3 sm:space-y-4 custom-scroll">
+                <div class="bg-blue-500/5 p-3 sm:p-4 rounded-xl border border-blue-500/20 hover:bg-blue-500/10 transition-colors group">
+                    <h3 class="font-bold text-base sm:text-lg mb-1 text-blue-300 flex items-center gap-3">
+                        <span class="p-1.5 bg-blue-500/20 rounded-lg">🎯</span> KOZMOZUN DÜZENİ
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">Kaosun içindeki diskleri, <b>ışık saçan hedef kuleye</b> büyükten küçüğe kusursuz bir piramit oluşturacak şekilde dizin.</p>
+                </div>
+
+                <div class="bg-yellow-500/5 p-3 sm:p-4 rounded-xl border border-yellow-500/20 hover:bg-yellow-500/10 transition-colors group">
+                    <h3 class="font-bold text-base sm:text-lg mb-1 text-yellow-400 flex items-center gap-3">
+                        <span class="p-1.5 bg-yellow-500/20 rounded-lg">🌟</span> ASAL KADİM GÜÇ
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed"><b>2, 3, 5 ve 7</b> numaralı diskler fizik kurallarını büker! Onları boyut fark etmeksizin her diskin üzerine yerleştirebilirsiniz.</p>
+                </div>
+
+                <div class="bg-indigo-500/5 p-3 sm:p-4 rounded-xl border border-indigo-500/20">
+                    <h3 class="font-bold text-base sm:text-lg mb-1 text-indigo-300 flex items-center gap-3">
+                        <span>🎮</span> ZAMANA KARŞI DİRENİŞ
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400">8 zorluk seviyesinde ustalığınızı kanıtlayın. Her saniye ve her hamle skorunuzu belirler.</p>
+                </div>
+            </div>
+            
+            <button id="start-game-btn" class="w-full shrink-0 bg-blue-600 hover:bg-blue-500 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-lg sm:text-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(37,99,235,0.4)] text-white uppercase tracking-widest font-[Orbitron]">
+                SİSTEMİ BAŞLAT
+            </button>
+        </div>
+    </div>
+
+    <div class="ui-overlay">
+        <div class="flex justify-between items-start">
+            <div class="glass p-5 px-8 flex flex-col gap-1 interactive">
+                <div class="flex items-center gap-4">
+                    <span id="level-indicator" class="bg-blue-600 px-3 py-1 rounded-lg text-[12px] font-bold shadow-lg">SEVİYE 1</span>
+                    <h2 class="font-bold text-xl">Puan: <span id="current-score" class="text-blue-400">0</span></h2>
+                </div>
+                <div class="flex gap-8 mt-3">
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] block text-slate-400 uppercase tracking-widest font-bold">Hamle</span>
+                        <span id="move-count" class="font-mono text-2xl font-bold text-center w-full">0</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] block text-slate-400 uppercase tracking-widest font-bold">Kalan Süre</span>
+                        <span id="timer" class="font-mono text-2xl text-yellow-400 font-bold text-center w-full">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass p-5 max-w-[240px] text-xs text-slate-300 interactive leading-relaxed hidden lg:block">
+                <p class="font-bold text-blue-400 mb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    STRATEJİ REHBERİ
+                </p>
+                <p>Disk <span class="prime-badge">2</span> <span class="prime-badge">3</span> <span class="prime-badge">5</span> ve <span class="prime-badge">7</span> asaldır. Bu diskleri çıkmaza girdiğinizde köprü olarak kullanın!</p>
+            </div>
+        </div>
+
+        <div id="score-popup">+500</div>
+
+        <div class="flex justify-between items-end">
+            <div class="flex gap-3 interactive">
+                <button id="reset-level" class="glass p-4 hover:bg-white/10 transition active:scale-90 shadow-lg" title="Sıfırla">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
+                <button id="toggle-music" class="glass p-4 hover:bg-white/10 transition active:scale-90 shadow-lg" title="Müziği Aç/Kapat">
+                    <svg id="music-on-icon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                    <svg id="music-off-icon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-slate-500 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                </button>
+            </div>
+            
+            <div class="glass p-5 text-left interactive max-w-[280px]">
+                <p class="text-[10px] text-blue-400 uppercase font-bold mb-2 tracking-tighter">KONTROLLER & ETKİLEŞİM</p>
+                <div class="space-y-1">
+                    <p class="text-xs text-slate-200 flex items-center gap-2">🖱️ <span class="font-semibold">Disk Seçimi:</span> Tıkla / Dokun</p>
+                    <p class="text-xs text-slate-200 flex items-center gap-2">🔄 <span class="font-semibold">Kamera Döndürme:</span> Sürükle</p>
+                    <p class="text-xs text-slate-200 flex items-center gap-2">🖐️ <span class="font-semibold">Ekranı Kaydır:</span> Sağ Tık / 2 Parmak</p>
+                    <p class="text-xs text-slate-200 flex items-center gap-2">🔍 <span class="font-semibold">Zoom:</span> Kaydır / Pinch</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seviye Başarı Modalı -->
+    <div id="victory-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 hidden">
+        <div class="glass glass-3d p-12 text-center max-w-sm w-[90%] border-2 border-green-500/40">
+            <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50 shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h2 id="modal-title" class="text-4xl font-bold text-green-400 mb-4 font-[Orbitron]">MÜKEMMEL!</h2>
+            <p id="modal-desc" class="text-slate-300 mb-8 leading-relaxed">Kule mimarisi başarıyla tamamlandı.</p>
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-white/5 p-5 rounded-2xl border border-white/10"><p class="text-xs text-slate-500 uppercase font-bold">Puan</p><p id="final-score" class="text-3xl font-bold text-yellow-400">0</p></div>
+                <div class="bg-white/5 p-5 rounded-2xl border border-white/10"><p class="text-xs text-slate-500 uppercase font-bold">Hamle</p><p id="final-moves" class="text-3xl font-bold">0</p></div>
+            </div>
+            <button id="next-level-btn" class="w-full bg-green-600 py-5 rounded-2xl font-bold hover:bg-green-500 transition shadow-2xl shadow-green-600/30 active:scale-95 text-white font-[Orbitron]">SONRAKİ SEVİYE</button>
+        </div>
+    </div>
+
+    <!-- Final Başarı Modalı -->
+    <div id="final-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 hidden">
+        <div class="glass glass-3d p-10 max-w-2xl w-[95%] max-h-[90vh] flex flex-col interactive border-2 border-yellow-500/40">
+            <h2 class="text-5xl font-bold text-center mb-3 text-yellow-400 font-[Orbitron] tracking-tighter drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]">EFSANEVİ!</h2>
+            <p class="text-center text-slate-400 mb-8 text-lg">Tüm strateji kulelerini fethettiniz.</p>
+            
+            <div id="final-stats-list" class="flex-1 overflow-y-auto custom-scroll pr-4 mb-8 space-y-3"></div>
+
+            <div class="bg-blue-600/10 border border-blue-500/30 p-6 rounded-2xl mb-8 flex justify-between items-center shadow-inner">
+                <div>
+                    <p class="text-xs text-blue-400 uppercase font-bold tracking-widest">TOPLAM SKOR</p>
+                    <p id="total-final-score" class="text-4xl font-bold text-white">0</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-blue-400 uppercase font-bold tracking-widest">TOPLAM SÜRE</p>
+                    <p id="total-final-time" class="text-2xl font-bold text-white">00:00</p>
+                </div>
+            </div>
+
+            <button id="play-again-btn" class="w-full bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-bold text-2xl transition-all shadow-2xl active:scale-95 shadow-blue-600/40 font-[Orbitron]">YENİDEN BAŞLA</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 3D SAYISAL STRATEJİ KULESİ - CORE ENGINE V4.1
+         */
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let towers = [], disks = [], selectedDisk = null, handModel = null;
+        let targetRing = null, particles = null;
+        let currentLevel = 1;
+        let score = 0, moves = 0, timeLeft = 0;
+        let gameActive = false, timerInterval = null;
+        let levelStats = [];
+        let isMusicPlaying = false;
+
+        const LEVELS = {
+            1: { disks: 3, time: 100, multiplier: 1.0 },
+            2: { disks: 4, time: 150, multiplier: 1.2 },
+            3: { disks: 5, time: 210, multiplier: 1.5 },
+            4: { disks: 6, time: 280, multiplier: 2.0 },
+            5: { disks: 7, time: 360, multiplier: 2.8 },
+            6: { disks: 8, time: 480, multiplier: 3.5 },
+            7: { disks: 9, time: 650, multiplier: 4.5 },
+            8: { disks: 10, time: 850, multiplier: 6.0 }
+        };
+
+        const PRIMES = [2, 3, 5, 7];
+        const isPrime = (n) => PRIMES.includes(n);
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioCtx();
+
+        function playSound(type) {
+            try {
+                const now = audioCtx.currentTime;
+                if (type === 'click') {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    osc.connect(g); g.connect(audioCtx.destination);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
+                    g.gain.setValueAtTime(0.2, now); g.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'complete') {
+                    const freqs = [523.25, 659.25, 783.99, 1046.50];
+                    freqs.forEach((f, i) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g); g.connect(audioCtx.destination);
+                        o.type = 'triangle'; o.frequency.setValueAtTime(f, now + i * 0.12);
+                        g.gain.setValueAtTime(0.2, now + i * 0.12);
+                        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.8);
+                        o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.8);
+                    });
+                } else if (type === 'error') {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    osc.connect(g); g.connect(audioCtx.destination);
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+                    g.gain.setValueAtTime(0.1, now); g.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                }
+            } catch(e) {}
+        }
+
+        function toggleMusic() {
+            const music = document.getElementById('bg-music');
+            if (isMusicPlaying) {
+                music.pause();
+                $('#music-on-icon').addClass('hidden');
+                $('#music-off-icon').removeClass('hidden');
+            } else {
+                music.play().catch(e => console.log("Müzik başlatılamadı:", e));
+                $('#music-on-icon').removeClass('hidden');
+                $('#music-off-icon').addClass('hidden');
+            }
+            isMusicPlaying = !isMusicPlaying;
+        }
+
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020617);
+            scene.fog = new THREE.Fog(0x020617, 25, 85);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 35, 45); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.maxPolarAngle = Math.PI / 2.1;
+            controls.minDistance = 15;
+            controls.maxDistance = 60;
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x0f172a, 0.8);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+            dirLight.position.set(15, 30, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.set(2048, 2048);
+            scene.add(dirLight);
+
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.2 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const grid = new THREE.GridHelper(100, 50, 0x1e293b, 0x0f172a);
+            grid.position.y = 0.02;
+            scene.add(grid);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            const ringGeo = new THREE.RingGeometry(2.8, 3.5, 48);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+            targetRing = new THREE.Mesh(ringGeo, ringMat);
+            targetRing.rotation.x = -Math.PI / 2;
+            targetRing.position.y = 0.35;
+            scene.add(targetRing);
+
+            createHand();
+            createVictoryParticles();
+
+            window.addEventListener('resize', onResize);
+            renderer.domElement.addEventListener('pointerdown', onInteract);
+        }
+
+        function createVictoryParticles() {
+            const count = 300;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) {
+                pos[i] = (Math.random() - 0.5) * 40;
+                colors[i] = Math.random();
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            const mat = new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, opacity: 0 });
+            particles = new THREE.Points(geo, mat);
+            scene.add(particles);
+        }
+
+        function triggerVictoryParticles() {
+            particles.material.opacity = 1.0;
+            const posAttr = particles.geometry.attributes.position;
+            for(let i=0; i<posAttr.count; i++) {
+                posAttr.setXYZ(i, (Math.random()-0.5)*2, 1, (Math.random()-0.5)*2);
+            }
+            posAttr.needsUpdate = true;
+            let frame = 0;
+            const anim = () => {
+                if(frame > 120) { particles.material.opacity = 0; return; }
+                for(let i=0; i<posAttr.count; i++) {
+                    const x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
+                    posAttr.setXYZ(i, x * 1.05, y + 0.2 - (frame*0.005), z * 1.05);
+                }
+                posAttr.needsUpdate = true;
+                particles.material.opacity -= 0.008;
+                frame++;
+                requestAnimationFrame(anim);
+            };
+            anim();
+        }
+
+        function createHand() {
+            handModel = new THREE.Group();
+            const handMat = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.4 });
+            const palm = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.6), handMat);
+            palm.castShadow = true;
+            handModel.add(palm);
+            for(let i=0; i<4; i++) {
+                const finger = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.25, 1.1), handMat);
+                finger.position.set(-0.55 + (i*0.36), 0, 0.9);
+                finger.castShadow = true;
+                handModel.add(finger);
+            }
+            const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.9), handMat);
+            thumb.position.set(0.85, 0.1, 0.7);
+            thumb.rotation.y = -Math.PI/1.3;
+            thumb.castShadow = true;
+            handModel.add(thumb);
+            handModel.visible = false;
+            scene.add(handModel);
+        }
+
+        function setupLevel(lvl) {
+            towers.forEach(t => scene.remove(t.group));
+            disks.forEach(d => scene.remove(d.mesh));
+            towers = []; disks = []; selectedDisk = null; handModel.visible = false;
+            moves = 0; $('#move-count').text(0);
+            timeLeft = LEVELS[lvl].time;
+            updateTimerDisplay();
+
+            const targetPos = new THREE.Vector3(0, 20, 30);
+            const startPos = camera.position.clone();
+            let animProgress = 0;
+            const camAnim = () => {
+                animProgress += 0.02;
+                if(animProgress >= 1) { camera.position.copy(targetPos); return; }
+                camera.position.lerpVectors(startPos, targetPos, animProgress);
+                requestAnimationFrame(camAnim);
+            };
+            camAnim();
+
+            const config = LEVELS[lvl];
+            const spacing = 10;
+            const startX = -((3 - 1) * spacing) / 2;
+
+            const towerMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.9, roughness: 0.1 });
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.3 });
+
+            for (let i = 0; i < 3; i++) {
+                const group = new THREE.Group();
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 10, 32), towerMat);
+                pole.position.y = 5; pole.castShadow = true; group.add(pole);
+                const base = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.7, 6.5), baseMat);
+                base.position.y = 0.35; base.receiveShadow = true; group.add(base);
+                group.position.x = startX + (i * spacing);
+                scene.add(group);
+                towers.push({ id: i, group: group, stack: [] });
+            }
+
+            targetRing.position.x = towers[2].group.position.x;
+            targetRing.visible = true;
+
+            $('#target-notification').addClass('active');
+            setTimeout(() => { $('#target-notification').removeClass('active'); }, 3500);
+
+            const colors = [0xf87171, 0x60a5fa, 0x4ade80, 0xfacc15, 0xa78bfa, 0xf472b6, 0x22d3ee, 0xf97316, 0x818cf8, 0xe879f9];
+            for (let i = config.disks; i > 0; i--) {
+                const radius = 1.3 + (i * 0.4);
+                const isDiskPrime = isPrime(i);
+                const diskMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(radius, radius, 0.85, 64),
+                    new THREE.MeshStandardMaterial({ 
+                        color: colors[i-1], metalness: 0.5, roughness: 0.3,
+                        emissive: colors[i-1], emissiveIntensity: 0.2
+                    })
+                );
+                diskMesh.castShadow = true; diskMesh.userData = { value: i, isPrime: isDiskPrime };
+                const canvas = document.createElement('canvas');
+                canvas.width = 128; canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white'; ctx.font = `bold ${isDiskPrime ? '90' : '85'}px Inter`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
+                ctx.fillText(i, 64, 64);
+                const label = new THREE.Mesh(
+                    new THREE.PlaneGeometry(radius * 1.5, radius * 1.5),
+                    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, side: THREE.DoubleSide })
+                );
+                label.position.y = 0.44; label.rotation.x = -Math.PI / 2;
+                diskMesh.add(label);
+                scene.add(diskMesh);
+                const diskObj = { value: i, mesh: diskMesh, tower: 0, isPrime: isDiskPrime };
+                disks.push(diskObj); towers[0].stack.push(diskObj);
+            }
+            updatePositions();
+            gameActive = true;
+            startTimer();
+        }
+
+        function updatePositions() {
+            towers.forEach(tower => {
+                tower.stack.forEach((disk, idx) => {
+                    if (selectedDisk !== disk) {
+                        disk.mesh.position.set(tower.group.position.x, 1.1 + (idx * 0.92), 0);
+                        disk.mesh.material.emissiveIntensity = 0.2;
+                    }
+                });
+            });
+        }
+
+        function onInteract(event) {
+            if (!gameActive) return;
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const diskInt = raycaster.intersectObjects(disks.map(d => d.mesh));
+            if (diskInt.length > 0) {
+                const clickedDisk = disks.find(d => d.mesh === diskInt[0].object);
+                const tower = towers[clickedDisk.tower];
+                if (tower.stack[tower.stack.length - 1] === clickedDisk) {
+                    if (selectedDisk === clickedDisk) {
+                        selectedDisk = null; 
+                        handModel.visible = false;
+                        controls.enabled = true; // SEÇİM İPTAL: Kamera kilidini aç
+                    } else {
+                        selectedDisk = clickedDisk; 
+                        playSound('click'); 
+                        handModel.visible = true;
+                        controls.enabled = false; // DİSK SEÇİLDİ: Kamerayı kilitle
+                    }
+                    updatePositions(); return;
+                } else { triggerErrorUI(); }
+            }
+            
+            if (selectedDisk) {
+                const towerInt = raycaster.intersectObjects(towers.map(t => t.group), true);
+                if (towerInt.length > 0) {
+                    let obj = towerInt[0].object;
+                    while(obj.parent && obj.type !== "Group") obj = obj.parent;
+                    const targetTower = towers.find(t => t.group === obj);
+                    if (targetTower) {
+                        tryMove(selectedDisk, targetTower);
+                        controls.enabled = true; // TAŞIMA SONRASI: Kamerayı serbest bırak
+                    }
+                }
+            }
+        }
+
+        function tryMove(disk, target) {
+            const source = towers[disk.tower];
+            if (source.id === target.id) { selectedDisk = null; handModel.visible = false; updatePositions(); return; }
+            let valid = true;
+            if (target.stack.length > 0) {
+                const top = target.stack[target.stack.length - 1];
+                if (disk.value > top.value && !disk.isPrime) valid = false;
+            }
+            if (valid) {
+                source.stack.pop(); target.stack.push(disk); disk.tower = target.id;
+                selectedDisk = null; handModel.visible = false; moves++;
+                $('#move-count').text(moves); playSound('click');
+                updatePositions(); checkVictory();
+            } else { triggerErrorUI(); }
+        }
+
+        function triggerErrorUI() {
+            playSound('error'); $('canvas').addClass('shake');
+            setTimeout(() => $('canvas').removeClass('shake'), 500);
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
+                timeLeft--; updateTimerDisplay();
+                if (timeLeft <= 0) gameOver();
+            }, 1000);
+        }
+
+        function formatTime(totalSeconds) {
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateTimerDisplay() {
+            $('#timer').text(formatTime(timeLeft)).css('color', timeLeft < 25 ? 'var(--accent-red)' : 'var(--accent-gold)');
+        }
+
+        function checkVictory() {
+            const targetTower = towers[2];
+            const requiredCount = LEVELS[currentLevel].disks;
+            if (targetTower.stack.length === requiredCount) {
+                let isCorrectOrder = true;
+                for (let i = 0; i < targetTower.stack.length - 1; i++) {
+                    if (targetTower.stack[i].value < targetTower.stack[i+1].value) {
+                        isCorrectOrder = false;
+                        break;
+                    }
+                }
+                if (isCorrectOrder) {
+                    gameActive = false; clearInterval(timerInterval);
+                    const currentLevelGain = calculateScore();
+                    triggerVictoryParticles();
+                    playSound('complete'); 
+                    levelStats.push({ level: currentLevel, score: currentLevelGain, moves: moves, timeUsed: LEVELS[currentLevel].time - timeLeft });
+                    if (currentLevel === 8) { showFinalVictory(); } 
+                    else { $('#victory-modal').fadeIn(400).css('display', 'flex'); }
+                }
+            }
+        }
+
+        function calculateScore() {
+            const levelBonus = currentLevel * 500;
+            const timeBonus = timeLeft * 3;
+            const movePenalty = moves * 5;
+            const gain = Math.max(100, Math.round(levelBonus + timeBonus - movePenalty));
+            score += gain;
+            $('#current-score').text(score);
+            $('#final-score').text(score);
+            $('#final-moves').text(moves);
+            $('#score-popup').text(`+${gain}`).css('opacity', 1).animate({top: '15%', opacity: 0}, 1500, function(){ $(this).css('top', '20%'); });
+            return gain;
+        }
+
+        function showFinalVictory() {
+            $('#total-final-score').text(score);
+            let totalSeconds = 0;
+            let listHtml = '';
+            levelStats.forEach(stat => {
+                totalSeconds += stat.timeUsed;
+                listHtml += `
+                    <div class="bg-white/5 border border-white/10 p-5 rounded-2xl flex justify-between items-center">
+                        <div class="flex items-center gap-5">
+                            <div class="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg">L${stat.level}</div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase font-bold tracking-widest text-left">Performans</p>
+                                <p class="text-sm font-semibold">${stat.moves} Hamle • ${formatTime(stat.timeUsed)}</p>
+                            </div>
+                        </div>
+                        <div class="text-right"><p class="text-xs text-slate-500 uppercase font-bold">Puan</p><p class="text-xl font-bold text-yellow-400">+${stat.score}</p></div>
+                    </div>`;
+            });
+            $('#final-stats-list').html(listHtml);
+            $('#total-final-time').text(formatTime(totalSeconds));
+            $('#final-modal').fadeIn(500).css('display', 'flex');
+        }
+
+        function gameOver() {
+            gameActive = false; clearInterval(timerInterval);
+            $('#modal-title').text("HÜSRAN").removeClass('text-green-400').addClass('text-red-500');
+            $('#modal-desc').text("Zaman stratejiden daha hızlı aktı.");
+            $('#next-level-btn').text("TEKRAR DENE").removeClass('bg-green-600').addClass('bg-red-600');
+            $('#victory-modal').fadeIn(400).css('display', 'flex');
+        }
+
+        function onResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if (targetRing && targetRing.visible) {
+                const s = 1 + Math.sin(Date.now() * 0.005) * 0.12;
+                targetRing.scale.set(s, s, s);
+                targetRing.material.opacity = 0.3 + Math.sin(Date.now() * 0.005) * 0.2;
+            }
+            if (selectedDisk) {
+                const mesh = selectedDisk.mesh;
+                mesh.position.y += (10.5 - mesh.position.y) * 0.15;
+                const auraIntensity = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
+                if(selectedDisk.isPrime) { mesh.material.emissive.setHex(0xfbbf24); } 
+                else { mesh.material.emissive.setHex(mesh.material.color.getHex()); }
+                mesh.material.emissiveIntensity = auraIntensity;
+                handModel.position.copy(mesh.position);
+                handModel.position.y += 1.2;
+                handModel.rotation.y = Math.sin(Date.now() * 0.003) * 0.2;
+            }
+            renderer.render(scene, camera);
+        }
+
+        // Event Listeners
+        $('#start-game-btn').on('click', () => { 
+            $('#start-modal').fadeOut(); 
+            audioCtx.resume().then(() => {
+                setupLevel(currentLevel);
+                toggleMusic(); 
+            }); 
+        });
+
+        $('#next-level-btn').on('click', () => { 
+            $('#victory-modal').fadeOut(); 
+            if (currentLevel < 8 && timeLeft > 0) {
+                currentLevel++; 
+                $('#modal-title').text("MÜKEMMEL!").addClass('text-green-400').removeClass('text-red-500');
+                $('#next-level-btn').addClass('bg-green-600').removeClass('bg-red-600');
+            }
+            $('#level-indicator').text(`SEVİYE ${currentLevel}`); 
+            setupLevel(currentLevel); 
+        });
+
+        $('#play-again-btn').on('click', () => { 
+            $('#final-modal').fadeOut(); 
+            currentLevel = 1; score = 0; levelStats = []; 
+            $('#current-score').text(0); 
+            $('#level-indicator').text(`SEVİYE ${currentLevel}`); 
+            setupLevel(currentLevel); 
+        });
+
+        $('#reset-level').on('click', () => setupLevel(currentLevel));
+        $('#toggle-music').on('click', toggleMusic);
+
+        window.onload = () => { init3D(); animate(); };
+    </script>
+</body>
+</html>

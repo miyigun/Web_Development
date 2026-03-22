@@ -1,0 +1,243 @@
+@font-face {
+    font-family: 'Helvetica';
+    src: url('fonts/Helveticasinav.ttf');
+}
+
+body {
+    font-family: 'Helvetica', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.dialog-ipucu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-ipucu-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-ipucu-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.dialog-ipucu-title {
+    font-family: 'helveticasinav';
+    font-size: 30px;
+    font-weight: bold;
+    margin-left: 10px; /* Başlık ile resim arasına mesafe koyar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dialog-ipucu-content {
+    font-family: 'helveticasinav';
+    margin-bottom: 20px;
+}
+
+.dialog-ipucu-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.dialog-ipucu-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+
+.close-ipucu-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 150px;
+}
+
+.drop-area {
+    border: 2px dashed #007bff;
+    border-radius: 5px;
+    padding: 20px;
+    min-height: 100px;
+    margin: 10px 0;
+    display: block;
+    margin-bottom: 10px; /* Öğelerin alt alta sıralanması için boşluk bırakır */
+}
+
+.draggable.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.drop-area.disabled {
+    border: 2px dashed #ccc;
+    background-color: #f9f9f9;
+}
+
+#score {
+    display: none; /* Puan kısmı başta gizli */
+}
+
+#steps {
+    margin-left: 10px;
+}
+
+.step {
+    padding: 10px;
+    margin: 5px;
+    background-color: #f8f9fa;
+    cursor: grab;
+    display: block;
+    border: 2px dashed #007bff; /* Tırtıklı çerçeve rengi ve stili */
+    border-radius: 5px; /* Kenar yuvarlama (isteğe bağlı) */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Hafif gölge efekti (isteğe bağlı) */
+}
+
+#timer {
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 1.2em;
+}
+.result {
+    margin-top: 10px;
+}
+.hidden {
+    display: none;
+}
+.correct {
+    color: green;
+}
+.incorrect {
+    color: red;
+}
+.result-icon {
+    margin-left: 10px;
+}
+
+ /* Yeni pencere için stil */
+ #introModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#introContent {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+#introImage {
+    max-width: 80vw; /* Görüntü genişliğini viewport genişliğinin %80'i ile sınırla */
+    max-height: 80vh; /* Görüntü yüksekliğini viewport yüksekliğinin %80'i ile sınırla */
+    width: auto; /* Oran koruma için genişliği otomatik ayarla */
+    height: auto; /* Oran koruma için yüksekliği otomatik ayarla */
+    display: block;
+    margin: 0 auto; /* Görüntüyü yatay olarak ortalar */
+}
+
+#parallax-background {
+    background-image: url('img/arka-plan4.jpeg');
+    background-size: cover;
+    height: 100%;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 100%;
+    z-index: -2;
+    opacity: 0.25;
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-height: 100vh; /* Arka planın tam boyutta görünmesini sağlar */
+    animation: moveBackground 50s linear infinite;
+}
+
+@keyframes moveBackground {
+    0% {
+        background-position: 0% 0%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    100% {
+        background-position: 0% 0%;
+    }
+}
+
+#theorem {
+    text-align: start;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #007bff;
+    background-color: #a5c6e8;
+    border-radius: 8px;
+}
+
+.result-icon {
+    display: inline-block;
+    animation: pulse 1s;
+}
+
+.score-negative {
+    position: absolute;
+    top: -10px;
+    right: -17px;
+    color: red;
+    font-size: 16px;
+}
+
+.score-positive {
+    position: absolute;
+    top: -10px;
+    right: -17px;
+    color: green;
+    font-size: 16px;
+}
+        
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.5);
+    }
+    100% {
+        transform: scale(1);
+    }
+}

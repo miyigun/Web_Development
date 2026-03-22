@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>NEURO-MAZE: Logic Core</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;800&display=swap');
+
+		:root {
+			--neon-blue: #00f3ff;
+			--neon-purple: #bc13fe;
+			--neon-green: #00ff41;
+			--neon-gold: #ffd700;
+			--neon-orange: #ffae00;
+			--neon-red: #ff0055;
+			--bg-dark: #050505;
+			--glass: rgba(10, 20, 30, 0.9);
+		}
+
+		body {
+			margin: 0; overflow: hidden; background-color: var(--bg-dark);
+			font-family: 'Exo 2', sans-serif; color: white;
+			user-select: none; -webkit-user-select: none;
+			touch-action: none;
+		}
+
+		#canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+		#ui-layer {
+			position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+			pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+		}
+		.pointer-auto { pointer-events: auto; }
+
+		/* HEADER */
+		header {
+			padding: 15px 25px; background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%);
+			display: flex; justify-content: space-between; align-items: center;
+		}
+		.logo { font-size: 1.6rem; font-weight: 800; color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue); letter-spacing: 2px; }
+		
+		.level-select-container { pointer-events: auto; display: flex; gap: 10px; align-items: center; }
+		#lvl-select {
+			background: rgba(0,0,0,0.8); border: 1px solid var(--neon-blue); color: var(--neon-blue);
+			padding: 5px 10px; border-radius: 5px; font-family: 'Exo 2'; font-weight: bold; cursor: pointer; outline: none;
+		}
+		#lvl-select option { background: black; color: white; }
+
+		/* INFO PANEL */
+		#info-panel {
+			position: absolute; right: 20px; top: 80px; width: 260px;
+			background: var(--glass); border-left: 3px solid var(--neon-blue);
+			padding: 20px; border-radius: 0 10px 10px 0; backdrop-filter: blur(10px);
+			font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px;
+			transform: translateX(0); transition: transform 0.3s ease; box-shadow: -5px 5px 20px rgba(0,0,0,0.5);
+		}
+		.panel-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; }
+		.lbl { color: #aaa; letter-spacing: 1px; }
+		.val { color: var(--neon-green); font-weight: bold; }
+
+		/* CONTROLS */
+		#controls {
+			padding: 15px; background: rgba(5,5,5,0.95); border-top: 1px solid #333;
+			display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;
+			padding-bottom: 30px; box-shadow: 0 -5px 20px rgba(0, 243, 255, 0.1);
+		}
+
+		.tool-group { display: flex; gap: 10px; background: #0a0a0a; padding: 8px; border-radius: 12px; border: 1px solid #333; }
+
+		.tool-btn {
+			width: 60px; height: 60px; background: #1a1a1a;
+			border: 1px solid #444; border-radius: 10px; cursor: pointer; position: relative;
+			display: flex; flex-direction: column; align-items: center; justify-content: center;
+			transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+		}
+		.tool-btn:hover { background: #2a2a2a; border-color: #666; }
+		.tool-btn.active { border-color: var(--neon-blue); background: rgba(0, 243, 255, 0.1); box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); transform: scale(1.05); }
+		.tool-btn.del-mode.active { border-color: var(--neon-red); background: rgba(255, 0, 85, 0.1); box-shadow: 0 0 15px rgba(255, 0, 85, 0.3); }
+		
+		.badge {
+			position: absolute; top: -8px; right: -8px; background: var(--neon-green); color: black;
+			width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+			font-weight: 800; font-size: 0.75rem; z-index: 2; border: 2px solid #000;
+		}
+
+		.action-btn {
+			height: 55px; padding: 0 20px; background: linear-gradient(135deg, #111, #222); 
+			border: 1px solid var(--neon-green); color: var(--neon-green);
+			font-weight: 700; cursor: pointer; border-radius: 8px; font-family: 'Exo 2', sans-serif;
+			font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;
+			display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+			user-select: none; outline: none;
+		}
+		.action-btn:hover { background: #222; box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); }
+		.action-btn:active { transform: scale(0.95); }
+		.action-btn.solve { border-color: var(--neon-orange); color: var(--neon-orange); opacity: 0.5; pointer-events: none; }
+		.action-btn.solve.unlocked { opacity: 1; pointer-events: auto; animation: pulse 2s infinite; }
+
+		@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 174, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 174, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 174, 0, 0); } }
+
+		/* MODALS */
+		.modal {
+			display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+			background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; text-align: center;
+			backdrop-filter: blur(15px);
+		}
+		.modal-box {
+			background: #0a0a0a; border: 1px solid var(--neon-blue); padding: 40px;
+			max-width: 600px; width: 85%; border-radius: 20px; position: relative;
+			box-shadow: 0 0 60px rgba(0, 243, 255, 0.1);
+		}
+		.modal h1 { margin: 0 0 10px 0; color: var(--neon-blue); font-weight: 800; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 5px; }
+		.modal p { color: #888; font-size: 1rem; letter-spacing: 1px; margin-bottom: 20px; line-height: 1.5; }
+
+		#final-overlay {
+			display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+			background: rgba(0,0,0,0.98); z-index: 200;
+			justify-content: center; align-items: center; flex-direction: column;
+			opacity: 0; transition: opacity 2s;
+		}
+		.final-title { 
+			font-size: 5rem; color: var(--neon-gold); text-shadow: 0 0 40px var(--neon-gold); 
+			margin: 0; letter-spacing: 10px; font-weight: 900;
+		}
+		.final-sub { font-size: 1.5rem; color: white; letter-spacing: 5px; margin-top: 10px; text-transform: uppercase; }
+
+		.tut-nav {
+			background: transparent; border: none; color: white; font-size: 2rem; cursor: pointer; transition: 0.3s;
+		}
+		.tut-nav:hover { color: var(--neon-blue); transform: scale(1.2); }
+
+		/* TOAST NOTIFICATION */
+		#toast {
+			position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+			background: rgba(20, 5, 10, 0.95); border: 1px solid var(--neon-red);
+			color: white; padding: 15px 30px; border-radius: 8px; z-index: 1000;
+			font-family: 'Exo 2', sans-serif; font-size: 1.1rem; text-align: center; 
+			box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+			transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+			pointer-events: none;
+		}
+		#toast.show { top: 30px; }
+
+	</style>
+	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+
+	<audio id="bgm" loop>
+		<source src="suspence-music-1-8160.mp3" type="audio/mpeg">
+	</audio>
+	
+	<div id="toast">Sinyal topunun düşmesi için size verilen blokların tamamını kullanarak bir yol oluşturmalısınız.</div>
+
+	<div id="start-modal" class="modal" style="display:flex;">
+		<div class="modal-box">
+			<h1>NEURO-MAZE</h1>
+			<p>Size verilen belirli sayı ve çeşitteki blokların <b>TAMAMINI</b> kullanarak yukarıdan düşen sinyal topunu kırmızı bitiş noktasına ulaştırmalısınız.<br>
+			<span style="font-size:0.85rem; color:#555;">(Not: Bu yönerge ekranına oyun içindeyken sağ üstteki '?' butonuna tıklayarak istediğiniz zaman dönebilirsiniz.)</span></p>
+			
+			<div id="tut-3d-container" style="width: 220px; height: 220px; margin: 0 auto; border: 1px dashed #333; border-radius: 10px; background: rgba(0,0,0,0.5);"></div>
+			
+			<div style="display:flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 0 30px;">
+				<button class="tut-nav" onclick="prevTutBlock()">◀</button>
+				<div id="tut-name" style="font-size: 1.5rem; font-weight: 800; color: var(--neon-blue); letter-spacing: 2px;">DÜZ BORU</div>
+				<button class="tut-nav" onclick="nextTutBlock()">▶</button>
+			</div>
+			<p id="tut-desc" style="height: 40px; color: #aaa; margin-top: 5px;">Sinyali düz bir çizgide iletir.</p>
+
+			<div style="display:flex; justify-content: center; margin-top: 15px;">
+				<button type="button" id="start-btn" class="action-btn pointer-auto" style="padding: 15px 60px; font-size:1.3rem; border-color:var(--neon-blue); color:var(--neon-blue);" onclick="closeTutorial()">SİSTEMİ BAŞLAT</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="win-modal" class="modal">
+		<div class="modal-box" style="border-color:var(--neon-green);">
+			<h2 style="color:var(--neon-green); font-size:3rem; margin:0; text-shadow: 0 0 20px rgba(0,255,65,0.5);">BAŞARILI</h2>
+			<p style="margin-bottom:20px; margin-top:10px;">Sistem optimize edildi.</p>
+			<button type="button" class="action-btn pointer-auto" onclick="nextLevel()" style="width:100%; justify-content:center; font-size:1.2rem;">SONRAKİ SEVİYE ▶</button>
+		</div>
+	</div>
+
+	<div id="canvas-container"></div>
+	
+	<div id="final-overlay">
+		<h1 class="final-title">NEURO-MASTER</h1>
+		<div class="final-sub">TÜM SEVİYELER TAMAMLANDI</div>
+		<div style="width: 100px; height: 2px; background: var(--neon-gold); margin: 30px auto;"></div>
+		<p style="color: #ccc; max-width: 600px; text-align: center; line-height: 1.6;">
+			Mimar seviyesine ulaşıldı. Logic Core v9.5 başarıyla entegre edildi.
+		</p>
+		<button type="button" class="action-btn pointer-auto" onclick="location.reload()" style="margin-top:30px; border-color:white; color:white; background:transparent;">SİSTEMİ YENİDEN BAŞLAT ↺</button>
+	</div>
+
+	<div id="ui-layer" style="display:none;">
+		<header class="pointer-auto">
+			<span class="logo">NEURO<span style="color:white">MAZE</span></span>
+			
+			<div class="level-select-container">
+				<label for="lvl-select" style="font-size:0.8rem; color:#aaa;">GİT:</label>
+				<select id="lvl-select" onchange="jumpToLevel(this.value)"></select>
+				<button id="help-btn" onclick="openTutorial()" style="background:transparent; border:1px solid var(--neon-blue); color:var(--neon-blue); border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; margin-left:15px; display:flex; justify-content:center; align-items:center;" title="Yönerge">?</button>
+			</div>
+		</header>
+
+		<div id="info-panel" class="pointer-auto">
+			<div class="panel-row"><span class="lbl">DURUM</span> <span class="val" id="status-txt">BEKLİYOR</span></div>
+			<div class="panel-row"><span class="lbl">HAK</span> <span class="val" id="attempt-txt">3</span></div>
+			<div style="margin-top:15px; font-size:0.85rem; color:#999; line-height:1.4; border-top:1px solid #333; padding-top:10px;">
+				<span style="color:var(--neon-blue); font-weight:bold;">GÖREV:</span> <span id="hint-txt" style="color:white;">-</span>
+			</div>
+		</div>
+
+		<div id="controls" class="pointer-auto">
+			<div class="tool-btn del-mode" id="btn-del" onclick="toggleDel()">
+				<div style="font-size:2rem; color:#ff0055">✖</div>
+				<div style="font-size:0.7rem; color:#aaa; margin-top:-5px;">SİL</div>
+			</div>
+			
+			<div class="tool-group" id="inv-cont"></div>
+			
+			<div style="display:flex; gap:10px; width:100%; justify-content:center; margin-top:10px;">
+				<button type="button" class="action-btn" onclick="rotateSelection()">
+					<span style="font-size:1.4rem;">⟳</span> ÇEVİR
+				</button>
+				<button type="button" class="action-btn" id="btn-run" style="background:rgba(0,255,65,0.15);" onclick="runSimulation()">
+					<span style="font-size:1.2rem;">▶</span> BAŞLAT
+				</button>
+				<button type="button" class="action-btn solve" id="btn-solve" onclick="solveLevel()">
+					🔒 ÇÖZÜM
+				</button>
+			</div>
+		</div>
+	</div>
+
+<script>
+	const TILE_SIZE = 10;
+	const GRID_SIZE = 6;
+	const OFFSET = (GRID_SIZE * TILE_SIZE) / 2 - (TILE_SIZE / 2);
+	
+	const DIRS = {
+		UP: {x:0, y:1, z:0, id:'UP'},
+		DOWN: {x:0, y:-1, z:0, id:'DOWN'},
+		LEFT: {x:-1, y:0, z:0, id:'LEFT'},
+		RIGHT: {x:1, y:0, z:0, id:'RIGHT'},
+		FWD: {x:0, y:0, z:1, id:'FWD'},
+		BACK: {x:0, y:0, z:-1, id:'BACK'}
+	};
+
+	const BLOCKS = {
+		STRAIGHT: {
+			id: 'STRAIGHT', name: 'DÜZ BORU', color: 0x00f3ff, icon: '║',
+			getExit: (inDir, rot) => {
+				const mode = rot % 3;
+				if(mode === 0 && inDir.y !== 0) return inDir; 
+				if(mode === 1 && inDir.x !== 0) return inDir; 
+				if(mode === 2 && inDir.z !== 0) return inDir; 
+				return null;
+			}
+		},
+		CORNER: {
+			id: 'CORNER', name: 'DİK DİRSEK', color: 0xbc13fe, icon: 'Lr',
+			getExit: (inDir, rot) => {
+				const isFlipped = rot >= 4; 
+				const r = rot % 4; 
+				if (inDir.y === -1) {
+					if(isFlipped) return null;
+					if(r===0) return DIRS.RIGHT;
+					if(r===1) return DIRS.FWD;
+					if(r===2) return DIRS.LEFT;
+					if(r===3) return DIRS.BACK;
+				}
+				if (inDir.y === 1) {
+					if(!isFlipped) return null;
+					if(r===0) return DIRS.RIGHT;
+					if(r===1) return DIRS.FWD;
+					if(r===2) return DIRS.LEFT;
+					if(r===3) return DIRS.BACK;
+				}
+				let targetY = isFlipped ? DIRS.DOWN : DIRS.UP;
+				if(r===0 && inDir.x === -1) return targetY;
+				if(r===2 && inDir.x === 1) return targetY;
+				if(r===1 && inDir.z === -1) return targetY;
+				if(r===3 && inDir.z === 1) return targetY;
+				return null;
+			}
+		},
+		TURNER: { 
+			id: 'TURNER', name: 'YATAY DİRSEK', color: 0x00ff41, icon: '↱',
+			getExit: (inDir, rot) => {
+				if(inDir.y !== 0) return null; 
+				const r = rot % 4;
+				if(r===0) { if(inDir.z === -1) return DIRS.RIGHT; if(inDir.x === -1) return DIRS.FWD; }
+				if(r===1) { if(inDir.z === -1) return DIRS.LEFT; if(inDir.x === 1) return DIRS.FWD; }
+				if(r===2) { if(inDir.z === 1) return DIRS.LEFT; if(inDir.x === 1) return DIRS.BACK; }
+				if(r===3) { if(inDir.z === 1) return DIRS.RIGHT; if(inDir.x === -1) return DIRS.BACK; }
+				return null;
+			}
+		},
+		OMNI: { 
+			id: 'OMNI', name: 'OMNI HUB', color: 0xffae00, icon: '❖',
+			getExit: (inDir, rot) => { return inDir; }
+		}
+	};
+
+	const LEVEL_DATA = [
+		{ id:1, txt:"Temel Geçiş: Sinyali aşağı ve sağa yönlendirin.", start:{x:0,y:4,z:0}, end:{x:2,y:2,z:0}, inv:{ CORNER: 2, STRAIGHT: 2 }, sol:[ {x:0, y:4, z:0, t:'CORNER', r:0}, {x:1, y:4, z:0, t:'STRAIGHT', r:1}, {x:2, y:4, z:0, t:'CORNER', r:6}, {x:2, y:3, z:0, t:'STRAIGHT', r:0} ] },
+		{ id:2, txt:"Yatay Dönüş: Yeşil (TURNER) bloklar sadece yatayda çalışır.", start:{x:0,y:2,z:0}, end:{x:1,y:1,z:2}, inv:{ CORNER: 2, TURNER: 2 }, sol:[ {x:0, y:2, z:0, t:'CORNER', r:1}, {x:0, y:2, z:1, t:'TURNER', r:3}, {x:1, y:2, z:1, t:'TURNER', r:1}, {x:1, y:2, z:2, t:'CORNER', r:7} ] },
+		{ id:3, txt:"Sihirli Hub: OMNI bloğu sinyali aynı yönde doğrudan iletir.", start:{x:0,y:4,z:0}, end:{x:0,y:0,z:0}, inv:{ OMNI: 2, STRAIGHT: 2 }, sol:[ {x:0, y:4, z:0, t:'STRAIGHT', r:0}, {x:0, y:3, z:0, t:'OMNI', r:0}, {x:0, y:2, z:0, t:'OMNI', r:0}, {x:0, y:1, z:0, t:'STRAIGHT', r:0} ] },
+		{ id:4, txt:"Yükseklik Farkı: Aşağı katmanlara ulaşmak için köşe bloklarını akıllıca kullanın.", start:{x:0,y:4,z:0}, end:{x:2,y:0,z:0}, inv:{ CORNER: 4, STRAIGHT: 1, OMNI: 1 }, sol:[ {x:0, y:4, z:0, t:'CORNER', r:0}, {x:1, y:4, z:0, t:'CORNER', r:6}, {x:1, y:3, z:0, t:'CORNER', r:0}, {x:2, y:3, z:0, t:'CORNER', r:6}, {x:2, y:2, z:0, t:'STRAIGHT', r:0}, {x:2, y:1, z:0, t:'OMNI', r:0} ] },
+		{ id:5, txt:"Sarmal Yokuş: Hem dikey hem yatay keskin manevralar yapın.", start:{x:1,y:3,z:1}, end:{x:2,y:1,z:2}, inv:{ CORNER: 5, TURNER: 3 }, sol:[ {x:1, y:3, z:1, t:'CORNER', r:0}, {x:2, y:3, z:1, t:'TURNER', r:1}, {x:2, y:3, z:2, t:'CORNER', r:7}, {x:2, y:2, z:2, t:'CORNER', r:2}, {x:1, y:2, z:2, t:'TURNER', r:0}, {x:1, y:2, z:1, t:'CORNER', r:5}, {x:1, y:1, z:1, t:'CORNER', r:0}, {x:2, y:1, z:1, t:'TURNER', r:1} ] },
+		{ id:6, txt:"Kilitli Nokta: Ortadaki gri sabit bloklardan geçmek zorundasınız.", start:{x:0,y:4,z:0}, end:{x:4,y:2,z:0}, fix:[{x:2,y:4,z:0,t:'OMNI',r:0}], inv:{ CORNER: 2, STRAIGHT: 3 }, sol:[ {x:0, y:4, z:0, t:'CORNER', r:0}, {x:1, y:4, z:0, t:'STRAIGHT', r:1}, {x:3, y:4, z:0, t:'STRAIGHT', r:1}, {x:4, y:4, z:0, t:'CORNER', r:6}, {x:4, y:3, z:0, t:'STRAIGHT', r:0} ] },
+		{ id:7, txt:"Zigzag Rotası: Zeminde yılan gibi kıvrılın.", start:{x:0,y:4,z:0}, end:{x:2,y:4,z:4}, inv:{ CORNER: 1, TURNER: 4, STRAIGHT: 1 }, sol:[ {x:0, y:4, z:0, t:'CORNER', r:1}, {x:0, y:4, z:1, t:'TURNER', r:3}, {x:1, y:4, z:1, t:'TURNER', r:1}, {x:1, y:4, z:2, t:'TURNER', r:3}, {x:2, y:4, z:2, t:'TURNER', r:1}, {x:2, y:4, z:3, t:'STRAIGHT', r:2} ] },
+		{ id:8, txt:"Merdiven Sistemi: Sadece köşeleri kullanarak kat kat inin.", start:{x:0,y:4,z:0}, end:{x:3,y:1,z:0}, inv:{ CORNER: 6 }, sol:[ {x:0, y:4, z:0, t:'CORNER', r:0}, {x:1, y:4, z:0, t:'CORNER', r:6}, {x:1, y:3, z:0, t:'CORNER', r:0}, {x:2, y:3, z:0, t:'CORNER', r:6}, {x:2, y:2, z:0, t:'CORNER', r:0}, {x:3, y:2, z:0, t:'CORNER', r:6} ] },
+		{ id:9, txt:"U-Dönüşü: Geldiğiniz yola paralel olarak geri dönün.", start:{x:2,y:4,z:2}, end:{x:2,y:1,z:2}, inv:{ CORNER: 4, TURNER: 2, STRAIGHT: 1 }, sol:[ {x:2, y:4, z:2, t:'CORNER', r:1}, {x:2, y:4, z:3, t:'TURNER', r:3}, {x:3, y:4, z:3, t:'CORNER', r:6}, {x:3, y:3, z:3, t:'CORNER', r:3}, {x:3, y:3, z:2, t:'TURNER', r:1}, {x:2, y:3, z:2, t:'CORNER', r:4}, {x:2, y:2, z:2, t:'STRAIGHT', r:0} ] },
+		{ id:10, txt:"FİNAL: Tüm bildiklerinizi tek bir devasa köprüde birleştirin.", start:{x:0,y:5,z:0}, end:{x:4,y:1,z:4}, inv:{ CORNER: 7, TURNER: 3, STRAIGHT: 2, OMNI: 1 }, sol:[ {x:0, y:5, z:0, t:'CORNER', r:0}, {x:1, y:5, z:0, t:'STRAIGHT', r:1}, {x:2, y:5, z:0, t:'CORNER', r:6}, {x:2, y:4, z:0, t:'CORNER', r:1}, {x:2, y:4, z:1, t:'TURNER', r:3}, {x:3, y:4, z:1, t:'OMNI', r:0}, {x:4, y:4, z:1, t:'CORNER', r:6}, {x:4, y:3, z:1, t:'CORNER', r:1}, {x:4, y:3, z:2, t:'STRAIGHT', r:2}, {x:4, y:3, z:3, t:'TURNER', r:2}, {x:3, y:3, z:3, t:'CORNER', r:4}, {x:3, y:2, z:3, t:'CORNER', r:1}, {x:3, y:2, z:4, t:'TURNER', r:3}, {x:4, y:2, z:4, t:'CORNER', r:6} ] }
+	];
+
+	let scene, camera, renderer, controls;
+	let blockMeshes = {}; 
+	let currentLevel = 0;
+	let inventory = {};
+	let attemptsLeft = 3;
+	let selectedType = null;
+	let selectedRot = 0; 
+	let isDeleteMode = false;
+	let isSimulating = false;
+	let ghostMesh = null;
+	let ac = null; 
+	let hoveredCoords = null; 
+	let isGameStarted = false;
+
+	let tutScene, tutCamera, tutRenderer, tutBlockMesh;
+	const tutBlocksList = ['STRAIGHT', 'CORNER', 'TURNER', 'OMNI'];
+	const tutDescList = [
+		"Sinyali düz bir çizgide iletir. İki tarafı açıktır.",
+		"Sinyalin yönünü 90 derece dikey veya yatay olarak değiştirir.",
+		"Sadece yatay düzlemde çalışır, sinyali sağa veya sola saptırır.",
+		"Sinyali geldiği yönden dümdüz geçirir, çok yönlü bir köprüdür."
+	];
+	let currentTutIdx = 0;
+
+	// Toast gösterici fonksiyon
+	let toastTimer;
+	function showToast(msg) {
+		const toast = document.getElementById('toast');
+		toast.innerText = msg;
+		toast.classList.add('show');
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+	}
+
+	window.onload = () => {
+		initTutorial3D();
+	};
+
+	function initTutorial3D() {
+		const container = document.getElementById('tut-3d-container');
+		tutScene = new THREE.Scene();
+		
+		tutCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+		tutCamera.position.set(22, 22, 25);
+		tutCamera.lookAt(0,0,0);
+		
+		tutRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+		tutRenderer.setSize(220, 220);
+		container.appendChild(tutRenderer.domElement);
+		
+		const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+		tutScene.add(ambLight);
+		const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+		dirLight.position.set(10, 20, 10);
+		tutScene.add(dirLight);
+		
+		updateTutBlock();
+		animate(); 
+	}
+
+	function updateTutBlock() {
+		if(tutBlockMesh) tutScene.remove(tutBlockMesh);
+		const type = tutBlocksList[currentTutIdx];
+		tutBlockMesh = createBlockMesh(type, 0, false, false);
+		tutBlockMesh.position.set(0,-2,0);
+		tutScene.add(tutBlockMesh);
+		
+		document.getElementById('tut-name').innerText = BLOCKS[type].name;
+		document.getElementById('tut-name').style.color = '#' + BLOCKS[type].color.toString(16).padStart(6, '0');
+		document.getElementById('tut-desc').innerText = tutDescList[currentTutIdx];
+	}
+
+	function nextTutBlock() {
+		currentTutIdx = (currentTutIdx + 1) % tutBlocksList.length;
+		updateTutBlock();
+	}
+	function prevTutBlock() {
+		currentTutIdx = (currentTutIdx - 1 + tutBlocksList.length) % tutBlocksList.length;
+		updateTutBlock();
+	}
+
+	function closeTutorial() {
+		document.getElementById('start-modal').style.display = 'none';
+		if (!isGameStarted) {
+			isGameStarted = true;
+			initGame();
+		} else {
+			document.getElementById('ui-layer').style.display = 'flex';
+		}
+	}
+
+	function openTutorial() {
+		document.getElementById('ui-layer').style.display = 'none';
+		document.getElementById('start-modal').style.display = 'flex';
+		document.getElementById('start-btn').innerText = "OYUNA DÖN";
+	}
+
+	function initGame() {
+		document.getElementById('ui-layer').style.display = 'flex';
+		
+		const bgm = document.getElementById('bgm');
+		bgm.volume = 0.15;
+		bgm.play().catch(e => console.log("Audio blocked"));
+
+		initThree();
+		initLevelSelect();
+
+		try {
+			const AudioContext = window.AudioContext || window.webkitAudioContext;
+			ac = new AudioContext();
+		} catch(e) {}
+
+		loadLevel(0);
+	}
+
+	function initLevelSelect() {
+		const sel = document.getElementById('lvl-select');
+		sel.innerHTML = '';
+		LEVEL_DATA.forEach((l, i) => {
+			const opt = document.createElement('option');
+			opt.value = i;
+			opt.innerText = `SEVİYE ${i+1}`;
+			sel.appendChild(opt);
+		});
+	}
+
+	function jumpToLevel(val) {
+		loadLevel(parseInt(val));
+	}
+
+	function initThree() {
+		const container = document.getElementById('canvas-container');
+		
+		scene = new THREE.Scene();
+		scene.fog = new THREE.FogExp2(0x050505, 0.002);
+
+		camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+		camera.position.set(60, 70, 80); 
+
+		renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+		container.appendChild(renderer.domElement);
+
+		controls = new THREE.OrbitControls(camera, renderer.domElement);
+		controls.enableDamping = true;
+		controls.dampingFactor = 0.05;
+		controls.maxDistance = 160;
+		controls.target.set(0, 15, 0);
+
+		const ambientLight = new THREE.AmbientLight(0x222222, 1.5); 
+		scene.add(ambientLight);
+
+		const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+		dirLight.position.set(40, 100, 60);
+		scene.add(dirLight);
+		
+		const spot = new THREE.SpotLight(0x00f3ff, 2);
+		spot.position.set(-50, 60, -50);
+		spot.lookAt(0,0,0);
+		scene.add(spot);
+
+		createGrid();
+
+		renderer.domElement.addEventListener('pointermove', onPointerMove);
+		renderer.domElement.addEventListener('pointerdown', onPointerDown);
+		window.addEventListener('resize', onWindowResize);
+	}
+
+	function createGrid() {
+		const gridGroup = new THREE.Group();
+		gridGroup.position.set(-OFFSET, 0, -OFFSET);
+		
+		const helper = new THREE.GridHelper(GRID_SIZE*TILE_SIZE, GRID_SIZE, 0x00f3ff, 0x111111);
+		helper.position.set((GRID_SIZE*TILE_SIZE)/2 - OFFSET, -0.1, (GRID_SIZE*TILE_SIZE)/2 - OFFSET);
+		scene.add(helper);
+
+		// ZEMİN (Artık sadece bu kaldı, hatalı arka duvarlar kaldırıldı)
+		const floorGeo = new THREE.PlaneGeometry(GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE);
+		floorGeo.rotateX(-Math.PI / 2);
+		const floorMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+		const floorPlane = new THREE.Mesh(floorGeo, floorMat);
+		floorPlane.position.set(0, -TILE_SIZE/2, 0);
+		floorPlane.name = 'FLOOR';
+		scene.add(floorPlane);
+
+		const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(TILE_SIZE, TILE_SIZE, TILE_SIZE));
+		const edgeMat = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.3 });
+
+		for(let x=0; x<GRID_SIZE; x++) {
+			for(let y=0; y<GRID_SIZE; y++) {
+				for(let z=0; z<GRID_SIZE; z++) {
+					const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+					edges.position.set(x*TILE_SIZE, y*TILE_SIZE, z*TILE_SIZE);
+					gridGroup.add(edges);
+				}
+			}
+		}
+		scene.add(gridGroup);
+	}
+
+	function createBlockMesh(type, rotation, isFixed=false, isGhost=false) {
+		const group = new THREE.Group();
+		
+		const info = BLOCKS[type] || {color:0x888888};
+		const color = isFixed ? 0x333333 : info.color;
+		const opacity = isGhost ? 0.5 : 0.9;
+		
+		const mat = new THREE.MeshPhongMaterial({
+			color: color, 
+			transparent: true, opacity: opacity,
+			emissive: isFixed ? 0x000000 : color,
+			emissiveIntensity: isGhost ? 0.4 : 0.15,
+			shininess: 100
+		});
+
+		const boxGeo = new THREE.BoxGeometry(TILE_SIZE*0.85, TILE_SIZE*0.85, TILE_SIZE*0.85);
+		const box = new THREE.Mesh(boxGeo, mat);
+		box.name = 'OUTER_BOX';
+		
+		if(type === 'CORNER') box.scale.set(0.8, 0.8, 0.8);
+		if(type === 'TURNER') box.scale.set(0.9, 0.2, 0.9); 
+		if(type === 'OMNI') box.scale.set(0.7, 0.7, 0.7); 
+		
+		group.add(box);
+
+		const pipeMat = new THREE.MeshPhongMaterial({color:0xffffff, shininess:100});
+		const inner = new THREE.Group();
+		
+		if (type === 'STRAIGHT') {
+			const pipe = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, TILE_SIZE, 12), pipeMat);
+			const m = rotation % 3;
+			if(m===1) pipe.rotation.z = Math.PI/2;
+			if(m===2) pipe.rotation.x = Math.PI/2;
+			inner.add(pipe);
+		}
+		else if (type === 'CORNER') {
+			const p1 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, TILE_SIZE/2+1, 12), pipeMat);
+			p1.position.y = TILE_SIZE/4; 
+			const p2 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, TILE_SIZE/2+1, 12), pipeMat);
+			p2.rotation.z = Math.PI/2; 
+			p2.position.x = TILE_SIZE/4;
+			const joint = new THREE.Mesh(new THREE.SphereGeometry(2.2), pipeMat);
+			inner.add(p1); inner.add(p2); inner.add(joint);
+			
+			const isFlipped = rotation >= 4;
+			const r = rotation % 4;
+			if(isFlipped) inner.scale.y = -1;
+			inner.rotation.y = -r * (Math.PI/2);
+		}
+		else if (type === 'TURNER') {
+			const p1 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, TILE_SIZE/2+1, 12), pipeMat);
+			p1.rotation.x = Math.PI/2; 
+			p1.position.z = TILE_SIZE/4;
+
+			const p2 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, TILE_SIZE/2+1, 12), pipeMat);
+			p2.rotation.z = Math.PI/2; 
+			p2.position.x = TILE_SIZE/4;
+
+			const joint = new THREE.Mesh(new THREE.SphereGeometry(2.2), pipeMat);
+			inner.add(p1); inner.add(p2); inner.add(joint);
+			
+			inner.rotation.y = -(rotation % 4) * (Math.PI/2);
+		}
+		else if (type === 'OMNI') {
+			const joint = new THREE.Mesh(new THREE.SphereGeometry(3.5), pipeMat);
+			inner.add(joint);
+			const cGeo = new THREE.CylinderGeometry(1.5, 1.5, TILE_SIZE*0.9, 8);
+			const c1 = new THREE.Mesh(cGeo, pipeMat);
+			const c2 = new THREE.Mesh(cGeo, pipeMat); c2.rotation.x = Math.PI/2;
+			const c3 = new THREE.Mesh(cGeo, pipeMat); c3.rotation.z = Math.PI/2;
+			inner.add(c1); inner.add(c2); inner.add(c3);
+		}
+
+		group.add(inner);
+
+		// ÇÖZÜMÜN KALBİ: Z-fighting engellemek için boyutu %99'a küçültüldü.
+		if (!isGhost) {
+			const hitGeo = new THREE.BoxGeometry(TILE_SIZE * 0.99, TILE_SIZE * 0.99, TILE_SIZE * 0.99);
+			const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+			const hitBox = new THREE.Mesh(hitGeo, hitMat);
+			hitBox.name = 'HITBOX';
+			group.add(hitBox);
+		}
+
+		return group;
+	}
+
+	function updateMarkers(s, e) {
+		const oldS = scene.getObjectByName('MARKER_S');
+		const oldE = scene.getObjectByName('MARKER_E');
+		const oldSBox = scene.getObjectByName('MARKER_S_BOX');
+		const oldEBox = scene.getObjectByName('MARKER_E_BOX');
+		
+		if(oldS) scene.remove(oldS);
+		if(oldE) scene.remove(oldE);
+		if(oldSBox) scene.remove(oldSBox);
+		if(oldEBox) scene.remove(oldEBox);
+
+		const sGeo = new THREE.ConeGeometry(3, 5, 4);
+		const sMat = new THREE.MeshBasicMaterial({color: 0x00f3ff, wireframe:true});
+		const startMesh = new THREE.Mesh(sGeo, sMat);
+		startMesh.position.set(s.x*TILE_SIZE - OFFSET, s.y*TILE_SIZE + 5, s.z*TILE_SIZE - OFFSET);
+		startMesh.rotation.x = Math.PI;
+		startMesh.name = 'MARKER_S';
+		const ring = new THREE.Mesh(new THREE.TorusGeometry(2, 0.1, 8, 16), new THREE.MeshBasicMaterial({color:0xffffff}));
+		ring.rotation.x = Math.PI/2;
+		startMesh.add(ring);
+		scene.add(startMesh);
+
+		const eGeo = new THREE.CylinderGeometry(4, 4, 1, 32);
+		const eMat = new THREE.MeshBasicMaterial({color: 0xff0055, transparent:true, opacity:0.6});
+		const endMesh = new THREE.Mesh(eGeo, eMat);
+		endMesh.position.set(e.x*TILE_SIZE - OFFSET, e.y*TILE_SIZE - 4, e.z*TILE_SIZE - OFFSET);
+		endMesh.name = 'MARKER_E';
+		scene.add(endMesh);
+
+		const boxGeo = new THREE.BoxGeometry(TILE_SIZE * 0.99, TILE_SIZE * 0.99, TILE_SIZE * 0.99);
+		const invMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+		
+		const startBox = new THREE.Mesh(boxGeo, invMat);
+		startBox.position.set(s.x*TILE_SIZE - OFFSET, s.y*TILE_SIZE, s.z*TILE_SIZE - OFFSET);
+		startBox.userData = { x: s.x, y: s.y, z: s.z };
+		startBox.name = 'MARKER_S_BOX';
+		scene.add(startBox);
+
+		const endBox = new THREE.Mesh(boxGeo, invMat);
+		endBox.position.set(e.x*TILE_SIZE - OFFSET, e.y*TILE_SIZE, e.z*TILE_SIZE - OFFSET);
+		endBox.userData = { x: e.x, y: e.y, z: e.z };
+		endBox.name = 'MARKER_E_BOX';
+		scene.add(endBox);
+	}
+
+	const raycaster = new THREE.Raycaster();
+	const mouse = new THREE.Vector2();
+
+	function onPointerMove(e) {
+		if(isSimulating) return;
+		
+		const rect = renderer.domElement.getBoundingClientRect();
+		mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+		mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+		
+		if(!camera) return;
+		raycaster.setFromCamera(mouse, camera);
+		
+		let interactables = [];
+		
+		if (isDeleteMode) {
+			for(let key in blockMeshes) {
+				if (!blockMeshes[key].isFixed) {
+					const hitbox = blockMeshes[key].mesh.getObjectByName('HITBOX');
+					if (hitbox) interactables.push(hitbox);
+				}
+			}
+		} else {
+			const msb = scene.getObjectByName('MARKER_S_BOX');
+			const meb = scene.getObjectByName('MARKER_E_BOX');
+			const floor = scene.getObjectByName('FLOOR');
+
+			if(msb && !blockMeshes[`${msb.userData.x},${msb.userData.y},${msb.userData.z}`]) interactables.push(msb);
+			if(meb && !blockMeshes[`${meb.userData.x},${meb.userData.y},${meb.userData.z}`]) interactables.push(meb);
+			if(floor) interactables.push(floor);
+
+			for(let key in blockMeshes) {
+				const hitbox = blockMeshes[key].mesh.getObjectByName('HITBOX');
+				if (hitbox) interactables.push(hitbox);
+			}
+		}
+
+		const intersects = raycaster.intersectObjects(interactables, false);
+
+		if (intersects.length > 0) {
+			const hit = intersects[0];
+			const obj = hit.object;
+
+			if (isDeleteMode) {
+				if (obj.name === 'HITBOX') {
+					const ud = obj.userData;
+					hoveredCoords = { x:ud.x, y:ud.y, z:ud.z, type:'BLOCK' };
+					highlightForDelete(blockMeshes[ud.key].mesh);
+				}
+			} else {
+				let tx, ty, tz;
+
+				if (obj.name === 'FLOOR') {
+					tx = Math.floor((hit.point.x + OFFSET + TILE_SIZE/2) / TILE_SIZE);
+					ty = 0;
+					tz = Math.floor((hit.point.z + OFFSET + TILE_SIZE/2) / TILE_SIZE);
+				} else if (obj.name === 'MARKER_S_BOX' || obj.name === 'MARKER_E_BOX') {
+					tx = obj.userData.x;
+					ty = obj.userData.y;
+					tz = obj.userData.z;
+				} else if (obj.name === 'HITBOX') {
+					const n = hit.face.normal;
+					tx = obj.userData.x + Math.round(n.x);
+					ty = obj.userData.y + Math.round(n.y);
+					tz = obj.userData.z + Math.round(n.z);
+				}
+
+				if(tx !== undefined && tx>=0 && tx<GRID_SIZE && ty>=0 && ty<GRID_SIZE && tz>=0 && tz<GRID_SIZE) {
+					hoveredCoords = {x:tx, y:ty, z:tz};
+					updateGhost(tx, ty, tz);
+					if (ghostMesh) ghostMesh.visible = true;
+				} else {
+					hoveredCoords = null;
+					if (ghostMesh) ghostMesh.visible = false;
+				}
+			}
+		} else {
+			hoveredCoords = null;
+			if (isDeleteMode) resetHighlight();
+			if (ghostMesh) ghostMesh.visible = false;
+		}
+	}
+
+	function onPointerDown(e) {
+		if(isSimulating || !hoveredCoords) return;
+		
+		if(isDeleteMode) {
+			if(hoveredCoords.type === 'BLOCK') removeBlock(hoveredCoords);
+		} else {
+			if(selectedType) placeBlock(hoveredCoords.x, hoveredCoords.y, hoveredCoords.z, selectedType, selectedRot);
+		}
+	}
+
+	function updateGhost(x, y, z) {
+		if(!selectedType || inventory[selectedType] <= 0) {
+			if(ghostMesh) ghostMesh.visible = false;
+			return;
+		}
+
+		if(ghostMesh) scene.remove(ghostMesh);
+		ghostMesh = createBlockMesh(selectedType, selectedRot, false, true);
+		ghostMesh.position.set(x*TILE_SIZE - OFFSET, y*TILE_SIZE, z*TILE_SIZE - OFFSET);
+		scene.add(ghostMesh);
+		
+		const key = `${x},${y},${z}`;
+		if(blockMeshes[key]) {
+			const outer = ghostMesh.getObjectByName('OUTER_BOX');
+			if(outer && outer.material) {
+				outer.material.color.setHex(0xff0000);
+				outer.material.opacity = 0.3;
+			}
+		}
+	}
+
+	function highlightForDelete(mesh) {
+		resetHighlight();
+		const b = mesh.getObjectByName('OUTER_BOX');
+		if(b && b.material) b.material.emissive.setHex(0xff0000);
+	}
+	
+	function resetHighlight() {
+		for(let key in blockMeshes) {
+			const b = blockMeshes[key];
+			if(!b.isFixed) {
+				const col = BLOCKS[b.type].color;
+				const ob = b.mesh.getObjectByName('OUTER_BOX');
+				if(ob && ob.material) ob.material.emissive.setHex(col);
+			}
+		}
+	}
+
+	function placeBlock(x, y, z, type, rot, isFixed=false) {
+		const key = `${x},${y},${z}`;
+		if(blockMeshes[key]) return; 
+
+		if(!isFixed) {
+			if(inventory[type] <= 0) { playSound('error'); return; }
+			inventory[type]--;
+			updateUI();
+		}
+
+		const mesh = createBlockMesh(type, rot, isFixed);
+		mesh.position.set(x*TILE_SIZE - OFFSET, y*TILE_SIZE, z*TILE_SIZE - OFFSET);
+		
+		const hitBox = mesh.getObjectByName('HITBOX');
+		if (hitBox) {
+			hitBox.userData = { x: x, y: y, z: z, key: key };
+		}
+
+		mesh.scale.set(0,0,0);
+		new TWEEN.Tween(mesh.scale).to({x:1, y:1, z:1}, 400).easing(TWEEN.Easing.Elastic.Out).start();
+
+		scene.add(mesh);
+		blockMeshes[key] = { mesh, type, rot, isFixed };
+		
+		if(!isFixed) { 
+			playSound('place'); 
+			if(hoveredCoords) updateGhost(x,y,z); 
+		}
+	}
+
+	function removeBlock(c) {
+		const key = `${c.x},${c.y},${c.z}`;
+		const b = blockMeshes[key];
+		if(!b || b.isFixed) return;
+
+		inventory[b.type]++;
+		updateUI();
+		
+		new TWEEN.Tween(b.mesh.scale).to({x:0, y:0, z:0}, 200).onComplete(() => {
+			scene.remove(b.mesh);
+		}).start();
+
+		delete blockMeshes[key];
+		playSound('delete');
+		hoveredCoords = null; 
+	}
+
+	function rotateSelection() {
+		selectedRot = (selectedRot + 1) % 8;
+		playSound('rotate');
+		if(hoveredCoords && !isDeleteMode) updateGhost(hoveredCoords.x, hoveredCoords.y, hoveredCoords.z);
+	}
+
+	function runSimulation() {
+		if(isSimulating) return;
+
+		// Tüm blokların kullanılıp kullanılmadığını kontrol et
+		let unusedBlocks = false;
+		for(let t in inventory) {
+			if(inventory[t] > 0) { unusedBlocks = true; break; }
+		}
+
+		if (unusedBlocks && attemptsLeft <= 900) {
+			showToast("Sinyal topunun düşmesi için size verilen blokların tamamını kullanarak bir yol oluşturmalısınız.");
+			playSound('error');
+			return;
+		}
+
+		if(attemptsLeft <= 0) { playSound('error'); return; }
+
+		if(attemptsLeft < 900) attemptsLeft--; 
+		
+		document.getElementById('attempt-txt').innerText = attemptsLeft > 900 ? "∞" : attemptsLeft;
+		updateSolveBtn();
+
+		isSimulating = true;
+		playSound('start');
+		document.getElementById('status-txt').innerText = "SİMÜLASYON...";
+		document.getElementById('status-txt').style.color = "var(--neon-yellow)";
+
+		const lvl = LEVEL_DATA[currentLevel];
+		
+		const ballGeo = new THREE.SphereGeometry(2.5, 32, 32);
+		const ballMat = new THREE.MeshPhongMaterial({color:0xffffff, emissive:0x00f3ff, emissiveIntensity:0.5});
+		const ball = new THREE.Mesh(ballGeo, ballMat);
+		ball.position.set(
+			lvl.start.x*TILE_SIZE - OFFSET,
+			lvl.start.y*TILE_SIZE + 5, 
+			lvl.start.z*TILE_SIZE - OFFSET
+		);
+		scene.add(ball);
+
+		new TWEEN.Tween(ball.position).to({y: lvl.start.y*TILE_SIZE}, 400).easing(TWEEN.Easing.Bounce.Out).onComplete(() => {
+			simLoop(ball, {x:lvl.start.x, y:lvl.start.y, z:lvl.start.z}, DIRS.DOWN);
+		}).start();
+	}
+
+	function simLoop(ball, gridPos, currentDir) {
+		const lvl = LEVEL_DATA[currentLevel];
+		
+		if(gridPos.x === lvl.end.x && gridPos.y === lvl.end.y && gridPos.z === lvl.end.z) {
+			success(ball); return;
+		}
+
+		if(gridPos.x<0 || gridPos.x>=GRID_SIZE || gridPos.y<0 || gridPos.y>=GRID_SIZE || gridPos.z<0 || gridPos.z>=GRID_SIZE) {
+			fail(ball, "SİNYAL KAYBI"); return;
+		}
+
+		const key = `${gridPos.x},${gridPos.y},${gridPos.z}`;
+		const block = blockMeshes[key];
+
+		let nextDir = null;
+
+		if(block && block.type !== 'OBSTACLE') {
+			const logic = BLOCKS[block.type];
+			nextDir = logic.getExit(currentDir, block.rot);
+		} else {
+			if(currentDir.y === -1) nextDir = DIRS.DOWN;
+		}
+
+		if(!nextDir) {
+			fail(ball, "HATALI ROTA"); return;
+		}
+
+		const nextPos = { x: gridPos.x + nextDir.x, y: gridPos.y + nextDir.y, z: gridPos.z + nextDir.z };
+		
+		new TWEEN.Tween(ball.position).to({
+			x: nextPos.x*TILE_SIZE - OFFSET,
+			y: nextPos.y*TILE_SIZE,
+			z: nextPos.z*TILE_SIZE - OFFSET
+		}, 300).easing(TWEEN.Easing.Linear.None).onComplete(() => {
+			simLoop(ball, nextPos, nextDir);
+		}).start();
+
+		playSound('move');
+	}
+
+	function fail(ball, msg) {
+		document.getElementById('status-txt').innerText = msg;
+		document.getElementById('status-txt').style.color = "var(--neon-red)";
+		playSound('fail');
+		
+		new TWEEN.Tween(ball.scale).to({x:0, y:0, z:0}, 300).onComplete(() => {
+			scene.remove(ball);
+			isSimulating = false;
+		}).start();
+	}
+
+	function success(ball) {
+		playSound('win');
+		document.getElementById('win-modal').style.display = 'flex';
+		
+		new TWEEN.Tween(ball.position).to({y: ball.position.y + 20}, 1000).easing(TWEEN.Easing.Back.Out).onComplete(()=>{
+			scene.remove(ball);
+		}).start();
+	}
+
+	function loadLevel(idx) {
+		if(idx >= LEVEL_DATA.length) {
+			document.getElementById('ui-layer').style.display = 'none';
+			document.getElementById('win-modal').style.display = 'none';
+			
+			const overlay = document.getElementById('final-overlay');
+			overlay.style.display = 'flex';
+			setTimeout(() => { overlay.style.opacity = 1; }, 100);
+			
+			playSound('win'); 
+			return;
+		}
+		
+		currentLevel = idx;
+		const d = LEVEL_DATA[idx];
+		
+		document.getElementById('lvl-select').value = idx;
+
+		for(let k in blockMeshes) scene.remove(blockMeshes[k].mesh);
+		blockMeshes = {};
+
+		updateMarkers(d.start, d.end);
+
+		inventory = { ...d.inv };
+		attemptsLeft = 3;
+		isSimulating = false;
+		
+		document.getElementById('hint-txt').innerText = d.txt;
+		document.getElementById('status-txt').innerText = "HAZIR";
+		document.getElementById('status-txt').style.color = "white";
+		document.getElementById('attempt-txt').innerText = 3;
+		document.getElementById('win-modal').style.display = 'none';
+		updateSolveBtn();
+		
+		if(d.fix) d.fix.forEach(f => placeBlock(f.x, f.y, f.z, f.t, f.r, true));
+		
+		updateUI();
+		const keys = Object.keys(inventory);
+		if(keys.length>0) selectType(keys[0]);
+	}
+
+	function solveLevel() {
+		attemptsLeft = 999;
+		document.getElementById('attempt-txt').innerText = "∞";
+		updateSolveBtn();
+		
+		const sol = LEVEL_DATA[currentLevel].sol;
+		if(!sol) return;
+
+		for(let k in blockMeshes) {
+			if(!blockMeshes[k].isFixed) {
+				scene.remove(blockMeshes[k].mesh);
+				delete blockMeshes[k];
+			}
+		}
+
+		let required = {};
+		sol.forEach(s => {
+			if(!required[s.t]) required[s.t] = 0;
+			required[s.t]++;
+		});
+		for(let t in required) {
+			inventory[t] = required[t];
+		}
+		updateUI();
+
+		let delay = 0;
+		sol.forEach(s => {
+			setTimeout(() => {
+				if(!inventory[s.t]) inventory[s.t] = 0;
+				inventory[s.t]++;
+				placeBlock(s.x, s.y, s.z, s.t, s.r, false);
+			}, delay);
+			delay += 150;
+		});
+		
+		isSimulating = false;
+	}
+
+	function nextLevel() { loadLevel(currentLevel+1); }
+
+	function updateUI() {
+		const c = document.getElementById('inv-cont');
+		c.innerHTML = '';
+		let unusedBlocks = false;
+		for(let t in inventory) {
+			if(inventory[t] === undefined) continue;
+			if(inventory[t] > 0) unusedBlocks = true;
+
+			const div = document.createElement('div');
+			div.className = `tool-btn ${selectedType===t && !isDeleteMode ? 'active' : ''}`;
+			div.innerHTML = `
+				<div class="badge">${inventory[t]}</div>
+				<div style="font-size:1.5rem; color:${'#'+BLOCKS[t].color.toString(16)}">${BLOCKS[t].icon}</div>
+				<div style="font-size:0.6rem; color:#888;">${BLOCKS[t].name.split(' ')[0]}</div>
+			`;
+			div.onclick = () => selectType(t);
+			c.appendChild(div);
+		}
+
+		// BAŞLAT Butonunun Görsel Aktifliği 
+		const runBtn = document.getElementById('btn-run');
+		if (attemptsLeft <= 900) {
+			if (unusedBlocks) {
+				runBtn.style.opacity = "0.4"; // Bloklar bitmediyse sönük durur
+			} else {
+				runBtn.style.opacity = "1";   // Tamamı bittiyse parlaklaşır (aktif olur)
+			}
+		}
+	}
+
+	function selectType(t) {
+		selectedType = t;
+		isDeleteMode = false;
+		document.getElementById('btn-del').classList.remove('active');
+		updateUI();
+		if(hoveredCoords) updateGhost(hoveredCoords.x, hoveredCoords.y, hoveredCoords.z);
+	}
+	
+	function toggleDel() {
+		isDeleteMode = !isDeleteMode;
+		document.getElementById('btn-del').classList.toggle('active', isDeleteMode);
+		if(isDeleteMode && ghostMesh) ghostMesh.visible = false;
+		updateUI();
+	}
+
+	function updateSolveBtn() {
+		const btn = document.getElementById('btn-solve');
+		const runBtn = document.getElementById('btn-run');
+		
+		if(attemptsLeft <= 0 || attemptsLeft > 900) {
+			btn.classList.add('unlocked');
+			btn.innerHTML = "🔓 ÇÖZÜMÜ GÖSTER";
+			if(attemptsLeft > 900) {
+				runBtn.style.background = "var(--neon-green)";
+				runBtn.style.color = "black";
+				runBtn.innerHTML = "▶ İZLE";
+				runBtn.style.opacity = "1";
+			}
+		} else {
+			btn.classList.remove('unlocked');
+			btn.innerHTML = `🔒 ÇÖZÜM (${attemptsLeft})`;
+			runBtn.style.background = "rgba(0,255,65,0.15)";
+			runBtn.style.color = "var(--neon-green)";
+			runBtn.innerHTML = "▶ BAŞLAT";
+		}
+	}
+
+	function playSound(type) {
+		if(!ac) return;
+		if(ac.state === 'suspended') ac.resume();
+		
+		const osc = ac.createOscillator();
+		const gain = ac.createGain();
+		osc.connect(gain);
+		gain.connect(ac.destination);
+		
+		const now = ac.currentTime;
+		
+		if(type==='place') {
+			osc.frequency.setValueAtTime(600, now);
+			osc.frequency.exponentialRampToValueAtTime(100, now+0.1);
+			gain.gain.setValueAtTime(0.1, now);
+			gain.gain.linearRampToValueAtTime(0, now+0.1);
+			osc.start(now); osc.stop(now+0.1);
+		}
+		else if(type==='rotate') {
+			osc.type = 'triangle';
+			osc.frequency.setValueAtTime(400, now);
+			gain.gain.setValueAtTime(0.05, now);
+			gain.gain.linearRampToValueAtTime(0, now+0.05);
+			osc.start(now); osc.stop(now+0.05);
+		}
+		else if(type==='win') {
+			osc.type = 'square';
+			osc.frequency.setValueAtTime(500, now);
+			osc.frequency.setValueAtTime(1000, now+0.2);
+			gain.gain.setValueAtTime(0.1, now);
+			gain.gain.linearRampToValueAtTime(0, now+0.4);
+			osc.start(now); osc.stop(now+0.4);
+		}
+		else if(type==='fail' || type==='error') {
+			osc.type = 'sawtooth';
+			osc.frequency.setValueAtTime(150, now);
+			gain.gain.setValueAtTime(0.1, now);
+			gain.gain.linearRampToValueAtTime(0, now+0.3);
+			osc.start(now); osc.stop(now+0.3);
+		}
+	}
+
+	function onWindowResize() {
+		if(camera && renderer) {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+	}
+
+	function animate() {
+		requestAnimationFrame(animate);
+		TWEEN.update();
+		
+		if(document.getElementById('start-modal').style.display !== 'none' && tutBlockMesh) {
+			tutBlockMesh.rotation.y += 0.01;
+			tutRenderer.render(tutScene, tutCamera);
+		}
+
+		if(controls) controls.update();
+		if(renderer && scene && camera) renderer.render(scene, camera);
+	}
+
+</script>
+</body>
+</html>

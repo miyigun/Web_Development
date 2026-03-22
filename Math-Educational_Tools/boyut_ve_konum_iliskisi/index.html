@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sürgü ile Şekil Gösterimi</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="icon" href="icons/favicon.ico" type="image/x-icon">
+
+</head>
+<body oncontextmenu="return false;">
+    <div id="container">
+        <div id="title" style="font-size: 24px;"><h4>Sıfırdan farklı bir x gerçek sayısının dört farklı ardışık kuvvetinin fiziksel modellemesini görmek için sürgüyü kaydırınız.</h4></div>  
+        <span id="sliderValue">0</span>
+        <input type="range" id="slider" min="0" max="3" step="1" value="0" oninput="updateShape(this.value)">
+        <div id="dimension" style="margin-bottom: 30px; font-size: 20px; font-weight: bold;"></div>
+        <div id="shape"></div>   
+        <div id="equation"></div>   
+    </div>
+
+    <!-- Ses dosyaları -->
+    <audio id="click" src="mp3/click.mp3"></audio>
+    <audio id="option" src="mp3/menu_option.mp3"></audio>
+
+    <script src="main.js"></script>
+
+</body>
+</html>

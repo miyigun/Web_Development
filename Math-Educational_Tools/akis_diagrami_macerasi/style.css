@@ -1,0 +1,1360 @@
+@font-face {
+    font-family: 'Helvetica';
+    src: url('fonts/Helveticasinav.ttf');
+}
+
+body {
+    font-family: 'Helvetica', sans-serif;
+    width: 1920px;
+    height: 1080px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+#container-ana {
+    position: relative;
+    margin-top: 10px;
+    width: 100%;
+    height: 100vh; /* Tüm ekranı kapla */
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 5px;
+    background-color: white;
+    z-index: 2;
+}
+
+#matrixCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    /* Opaklık ayarı . Bunu değiştirmeyeceğim. O zaman container'ın diğer ögeleri de etkileniyor*/
+    /*opacity: 0.15; */
+    pointer-events: none; /* Canvas ögelerle etkileşime geçmesin */
+    background-color: rgba(0, 0, 0, 0.15); /* Arka plan rengi ve opaklık ayarı */
+    mix-blend-mode: multiply; /* Canvas'ı arka plana harmanlar. opacity property'si yerine bunu kullanacağım */
+
+}
+
+.dialog-ipucu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-ipucu-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-ipucu-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+    font-size: 28px;
+}
+
+.dialog-ipucu-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-left: 10px; /* Başlık ile resim arasına mesafe koyar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dialog-ipucu-content {
+    margin-bottom: 20px;
+}
+
+.dialog-ipucu-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.dialog-ipucu-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+
+.close-ipucu-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 120px;
+}
+
+.close-ipucu-button:hover {
+    background-color: #1E88E5; /* hover sırasında biraz daha koyu bir mavi */
+}
+
+.dialog-sonuc-overlay {
+    position: fixed;
+    top: 0;          /* Eklendi */
+    left: 0;         /* Eklendi */
+    width: 100%;     /* 400px yerine 100% yapıldı */
+    height: 100%;    /* Eklendi */
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-sonuc-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-sonuc-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.dialog-sonuc-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 10px; /* Başlık ile resim arasına mesafe koyar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dialog-sonuc-content {
+    margin-bottom: 20px;
+}
+
+.dialog-sonuc-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.dialog-sonuc-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+
+.basa-don-sonuc-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 110px;
+    height: 40px;
+    border: 1px solid;
+}
+
+.basa-don-sonuc-button:hover {
+    background-color: #1E88E5; /* hover sırasında biraz daha koyu bir mavi */
+}
+
+.bitir-sonuc-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 110px;
+    height: 40px;
+    border: 1px solid;
+}
+
+.bitir-sonuc-button:hover {
+    background-color: #1E88E5; /* hover sırasında biraz daha koyu bir mavi */
+}
+
+
+.bitir-sonuc-button2 {
+    
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 110px;
+    height: 40px;
+    border: 1px solid;
+}
+
+.bitir-sonuc-button2:hover {
+    background-color: #1E88E5; /* hover sırasında biraz daha koyu bir mavi */
+}
+
+.dialog-etkinlik-sonlandir-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-etkinlik-sonlandir-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-etkinlik-sonlandir-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.dialog-etkinlik-sonlandir-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 10px; /* Başlık ile resim arasına mesafe koyar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dialog-etkinlik-sonlandir-content {
+    margin-bottom: 20px;
+}
+
+.dialog-etkinlik-sonlandir-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.dialog-etkinlik-sonlandir-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+
+.tamam-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 150px;
+}
+
+.dialog-animasyon-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    font-family: helveticasinav;
+    font-size: 24;
+    
+}
+
+.dialog-animasyon-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-animasyon-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.dialog-animasyon-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-left: 10px; /* Başlık ile resim arasına mesafe koyar */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dialog-animasyon-content {
+    margin-bottom: 20px;
+}
+
+.dialog-animasyon-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.dialog-animasyon-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+
+.close-animasyon-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 150px;
+}
+
+#etkinlik-baslik {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 24px;
+    width: 100%;
+    font-weight: bold;
+}
+
+#content {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+#diagram-window,
+#cikti-kod-bloklari-penceresi,
+#cikti-ekrani,
+#basla-bitir-ekrani,
+#giris-ekrani,
+#islem-ekrani,
+#yazdir-ekrani {
+    float: left;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    height: auto;
+}
+
+#diagram-window {
+    order: 1;
+    flex:10;
+    width: 100%; /* Sol taraftaki içeriğin tam genişlikte olması */
+}
+
+#cikti-kod-bloklari-penceresi {
+    order: 2;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Sol taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+  
+}
+
+#kod-bloklari-penceresi {
+    flex:1;
+    display: flex;
+    flex-direction: row;
+    /* justify-content: start;
+    align-items: start; */
+    width: 100%; /* Sol taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+
+}
+
+#cikti-ekrani {
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    max-width: 100%; /* Sol taraftaki içeriğin tam genişlikte olması */
+    border: 1px solid #ccc; 
+    border-radius: 10px;
+    box-shadow: 0 0 10px #0000001a;
+    background-color: black;
+    margin-bottom: 30px;
+    margin-left: 20px;
+    margin-right: 50px;
+    margin-top: auto; /* Bu çıktı ekranını en altta tutacak ve yukarı kaymayı engelleyecektir*/
+}
+
+#basla-bitir-ekrani {
+    order: 1;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Orta taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+    justify-content: start;
+    align-items: start;
+    margin-bottom: 10px;
+    margin-top: 5px;
+}
+
+#giris-ekrani {
+    order: 2;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Orta taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+    justify-content: start;
+    align-items: start;
+    margin-bottom: 10px;
+    margin-top: 5px;
+    margin-left: 5px;;
+}
+
+#islem-ekrani {
+    order: 3;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Orta taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+    justify-content: start;
+    align-items: start;
+    margin-bottom: 10px;
+    margin-top: 5px;
+    margin-left: 5px;;
+}
+
+#yazdir-ekrani {
+    order: 4;
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Orta taraftaki içeriğin tam genişlikte olması */
+    /* border: 1px solid #ccc; 
+    box-shadow: 0 0 10px #0000001a; */
+    justify-content: start;
+    align-items: start;
+    margin-bottom: 10px;
+    margin-top: 5px;
+    margin-left: 5px;;
+}
+
+.diagram-container {
+    width: 100%; /* Mobil cihazlar için tam genişlik */
+    height: 85vh;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-left: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    box-sizing: border-box;
+}
+
+.diagram-container h2 {
+    margin: 0;
+    font-size: 16px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+#diagramImage {
+    width: 100%;
+    height: 100%;
+    /* max-height: calc(100% - 20px);
+    margin-top: 10px;  */
+}
+
+#button-container {
+    display: flex;
+    flex-direction: row;
+    text-align: center;
+    align-items: center;
+    vertical-align: center;
+    justify-content: space-evenly;
+    z-index: 3;
+}
+
+#button-calistir {
+    /* position: relative;
+    top: 10px;
+    left: 40%;    */
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    width: 110px;
+    height: 40px;
+    border: 1px solid;
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    vertical-align: center;
+    justify-content: center;
+
+    /* Butonun yerleşimi Bootstrap ile yapılır */
+    display: inline-block;
+    cursor: pointer;
+    background-color: #2196F3;
+    color: #fff;
+}
+
+#button-calistir:hover {
+    background-color: #1E88E5;
+}
+
+#button-calistir:disabled {
+    background-color: #B0BEC5; /* gri bir ton */
+    color: #CFD8DC; /* açık gri yazı rengi */
+    cursor: not-allowed; /* fare imlecini yasak sembolüne çevirir */
+    opacity: 0.6; /* butonu biraz şeffaf yapar */
+}
+
+#button-tekrar-dene {
+    /* position: relative;
+    top: 10px;
+    left: 40%;    */
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    z-index: 10;
+    width: 110px;
+    height: 40px;
+    border: 1px solid;
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    vertical-align: center;
+    justify-content: center;
+    background-color: #2196F3;
+    color: #fff;
+
+    /* Butonun yerleşimi Bootstrap ile yapılır */
+    display: inline-block;
+    cursor: pointer;
+}
+
+#button-tekrar-dene:hover {
+    background-color: #1E88E5;
+}
+
+#button-tekrar-dene:disabled {
+    background-color: #B0BEC5; /* gri bir ton */
+    color: #CFD8DC; /* açık gri yazı rengi */
+    cursor: not-allowed; /* fare imlecini yasak sembolüne çevirir */
+    opacity: 0.6; /* butonu biraz şeffaf yapar */
+}
+
+.toolbox {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    justify-content:start;
+    align-items: start;
+    /* padding: 20px; */
+    /* border: 1px solid;
+    border-radius: 10px; */
+    margin-right: 10px;
+}
+
+.toolbox-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modify the appearance of toolbox items */
+.toolbox-item {
+    width: 100px;
+    height: 70px;
+    font-family: helveticasinav;
+    display: flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    /* Text color to be visible on top of the image */
+    color: white;
+    font-size: 14px; /* Adjust font size for readability */
+    /* Make sure background color is transparent for the image */
+    background-color: transparent;
+     /* Keep the border style */
+    /* border: 1px solid #ccc; */
+     /* Maintain rounded corners */
+    /* border-radius: 5px; */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+
+.toolbox-item:active{
+    cursor: grabbing;
+}
+
+.toolbox-item-selected {
+    border: 2px solid #2196F3;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+}
+
+.toolbox2 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    justify-content:start;
+    align-items: start;
+    /* padding: 20px; */
+    /* border: 1px solid;
+    border-radius: 10px; */
+    margin-right: 10px;
+}
+
+.toolbox2-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modify the appearance of toolbox items */
+.toolbox2-item {
+    width: 100px;
+    height: 70px;
+    font-family: helveticasinav;
+    display: flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    /* Text color to be visible on top of the image */
+    color: white;
+    font-size: 14px; /* Adjust font size for readability */
+    /* Make sure background color is transparent for the image */
+    background-color: transparent;
+     /* Keep the border style */
+    /* border: 1px solid #ccc; */
+     /* Maintain rounded corners */
+    /* border-radius: 5px; */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+
+.toolbox2-item:active{
+    cursor: grabbing;
+}
+
+.toolbox3 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    justify-content:start;
+    align-items: start;
+    /* padding: 20px; */
+    /* border: 1px solid;
+    border-radius: 10px; */
+    margin-right: 10px;
+}
+
+.toolbox3-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modify the appearance of toolbox items */
+.toolbox3-item {
+    width: 100px;
+    height: 70px;
+    font-family: helveticasinav;
+    display: flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    /* Text color to be visible on top of the image */
+    color: white;
+    font-size: 24px; /* Adjust font size for readability */
+    /* Make sure background color is transparent for the image */
+    background-color: transparent;
+     /* Keep the border style */
+    /* border: 1px solid #ccc; */
+     /* Maintain rounded corners */
+    /* border-radius: 5px; */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+
+.toolbox3-item:active{
+    cursor: grabbing;
+}
+.toolbox4 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    justify-content:start;
+    align-items: start;
+    /* padding: 20px; */
+    /* border: 1px solid;
+    border-radius: 10px; */
+    margin-right: 10px;
+}
+
+.toolbox4-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modify the appearance of toolbox items */
+.toolbox4-item {
+    width: 100px;
+    height: 70px;
+    font-family: helveticasinav;
+    display: flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    /* Text color to be visible on top of the image */
+    color: white;
+    font-size: 14px; /* Adjust font size for readability */
+    /* Make sure background color is transparent for the image */
+    background-color: transparent;
+     /* Keep the border style */
+    /* border: 1px solid #ccc; */
+     /* Maintain rounded corners */
+    /* border-radius: 5px; */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+
+.toolbox4-item:active{
+    cursor: grabbing;
+}
+
+.dialog-org-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-org-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 1100px;
+    width: 100%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.dialog-org-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.dialog-org-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 10px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.dialog-org-content {
+    margin-bottom: 20px;
+}
+.dialog-org-buttons {
+    display: flex;
+    justify-content: center;
+}
+.dialog-org-buttons button {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 3px;
+}
+.close-org-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 150px;
+}
+
+.interactive-box {
+    width: 105px;
+    height: 70px;
+    position: absolute;
+    /* border: 2px solid black; */
+    box-sizing: border-box;
+    transition: border 0.3s;
+}
+
+.part-1 {
+    top: 5%;
+    left: 38%; /* Center horizontally */
+}
+
+
+.part-2 {
+    top: 24%;
+    left: 38%; /* Center horizontally */
+}
+
+.part-3 {
+    top: 44%;
+    left: 38%; /* Center horizontally */
+}
+
+.part-4 {
+    top: 63%;
+    left: 38%; /* Center horizontally */
+}
+
+.part-5 {
+    top: 82%;
+    left: 38%; /* Center horizontally */
+}
+
+.dashed-border {
+    border: 2px dashed #666 !important;
+}
+
+#a-degeri-girisi, #b-degeri-girisi{
+    overflow: hidden;
+    color: white;
+    background-color: black;
+    border: 1px solid #444;
+    margin-left: 30px;
+    padding: 5px;
+    width: 200px;
+    outline: none;
+}
+
+#a-degeri-girisi:focus , #b-degeri-girisi:focus {
+    border-color: #666;
+}
+
+@keyframes checkmarkAppear {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pointAppear {
+    0% {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.check-mark {
+    animation: checkmarkAppear 0.5s ease-out forwards;
+}
+
+.point-mark {
+    animation: pointAppear 0.5s ease-out forwards;
+}
+
+.selected {
+    border: 2px solid #007bff;
+    cursor: pointer;
+}
+
+.interactive-box.dashed-border {
+    border: 2px dashed #007bff;
+    cursor: pointer;
+}
+
+.toolbox-item, .toolbox2-item, .toolbox3-item, .toolbox4-item {
+    cursor: pointer;
+}
+
+
+.quiz-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.quiz-box {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    font-family: Arial, sans-serif;
+}
+
+.algorithm-box {
+    background: #f5f5f5;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+}
+
+.question-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #3498db;
+}
+
+.options-container {
+    margin: 1.5rem 0;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    margin: 1rem 0;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.option-item:hover {
+    background-color: #f8f9fa;
+}
+
+.navigation-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.nav-button {
+    background-color: #2196F3;
+    color: white;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 140px;
+    height: 50px;
+    border: 1px solid;
+    transition: background-color 0.3s ease;
+}
+
+.nav-button:disabled {
+    background-color: #cccccc !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+}
+
+.nav-button:not(:disabled) {
+    background-color: #2196F3;
+    cursor: pointer;
+}
+
+.nav-button:not(:disabled):hover {
+    background-color: #1E88E5;
+}
+
+.nav-button:hover {
+    background-color: #2980b9;
+}
+
+.algorithm-steps {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    line-height: 2;
+    border: 1px solid #dee2e6;
+}
+
+.algorithm-step {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding: 0.5rem 0;
+}
+
+.step-number {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.step-content {
+    color: #34495e;
+}
+
+.question-section {
+    margin: 1.5rem 0;
+    line-height: 1.6;
+}
+
+.values-list {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.algorithm-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.flow-chart-container {
+    margin: 2rem 0;
+}
+
+.question-prompt {
+    margin: 1.5rem 0;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+ /* Mobil görünüm için ek ayarlar */
+ @media (max-width: 768px) {
+    #content {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #diagram-window {
+        width: 80%;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 5px;
+    }
+
+    #kod-bloklari-penceresi {
+        width: 30%;
+        margin: auto;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 5px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #dialog-container {
+        margin-top: 20px;
+        max-width: 100%; /* İmajın maksimum genişliği ekran genişliği kadar olacak */
+       /* overflow: hidden;  Taşma durumunda içeriği keser */
+    }
+
+    #cikti-ekrani {
+        width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #button-container {
+        margin-bottom: 20px;
+    }
+
+    .toolbox-item, .toolbox2-item, .toolbox3-item, .toolbox4-item {
+        width: 60px;
+        height: 60px;
+        margin: 4px;
+    }
+
+    .toolbox-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: center;
+        padding: 5px;
+    }
+
+    .toolbox-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+    
+    .interactive-box {
+        width: 75px;
+        height: 50px;
+        position: absolute;
+        /* border: 2px solid black; */
+        box-sizing: border-box;
+        min-height: 50px;
+        transition: border 0.3s ease;
+    }
+
+    .quiz-box {
+        padding: 1rem;
+        width: 95%;
+    }
+
+    .question-title {
+        font-size: 1.2rem;
+    }
+
+    .option-item {
+        padding: 0.6rem;
+    }
+
+    .nav-button {
+        padding: 0.6rem 1.2rem;
+    }
+
+}
+
+@media (max-width: 480px) {
+    .quiz-box {
+        padding: 0.8rem;
+    }
+
+    .question-title {
+        font-size: 1.1rem;
+    }
+
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .nav-button {
+        width: 100%;
+    }
+}
+
+/* Tablet görünüm için ek ayarlar */
+/* @media (min-width: 768px) and (max-width: 1024px) { */
+@media (min-width: 768px) and (max-width: 1300px) {
+    #content {
+        flex-direction: column;
+    }
+
+    #diagram-window {
+        width: 100%;
+        margin: auto;
+        padding-left: 20%;
+        padding-right: 20%;
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #kod-bloklari-penceresi {
+        width: 100%;
+        margin: auto;
+        align-items: center;
+        justify-content: center;
+      
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #dialog-container {
+        margin-top: 0;
+        max-width: 100%; /* İmajın maksimum genişliği ekran genişliği kadar olacak */
+    }
+
+    #cikti-ekrani {
+        width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+}
+
+/* PC görünüm için ek ayarlar */
+/* @media (min-width: 1024px) { */
+@media (min-width: 1300px) {
+    #content {
+        flex-direction: row;
+        
+    }
+
+    #diagram-window {
+        width: 100%;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #cikti-ekrani {
+        width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 5px;
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #kod-bloklari-penceresi{
+        width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+        /* padding-top: 5px; */
+        box-sizing: border-box; /* Kutuların içeriğe dahil olmasını sağlar */
+    }
+
+    #dialog-container {
+        margin-top: 0;
+        max-width: 100%; /* İmajın maksimum genişliği ekran genişliği kadar olacak */
+    }
+}
+
+/* iOS'ta gereksiz seçimleri engelle */
+.toolbox-item, .toolbox2-item, .toolbox3-item, .toolbox4-item {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+}
+
+/* Sürükleme sırasındaki hayalet element için stil */
+.dragging-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.7;
+    transform: translate(-50%, -50%);
+}
+
+.explanation {
+    background-color: #e8f4f8;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    color: #0c5460;
+}
+
+.question-result.correct {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.question-result.incorrect {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 15px;
+    margin-bottom: 15px;
+}

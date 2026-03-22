@@ -1,0 +1,11 @@
+import numpy as np
+dizi=np.array([1,2,3,4,5,6,7])
+print(dizi[0])
+print(dizi[0:4])
+print(dizi[::-1])
+dizi2D=np.array([[1,2,3,4,5],[6,7,8,9,10]])
+print(dizi2D[1,1])
+print(dizi2D[:,1])
+print(dizi2D[1,1:4])
+print(dizi2D[-1,:])
+print(dizi2D[:,-1])
