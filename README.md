@@ -14,12 +14,7 @@ The goal is to learn and share modern, practical, and scalable approaches to bui
 - HTML / CSS / JavaScript practice projects  
 - Simple UI/UX trials and component ideas  
 
-### 2. Games-Simulation
-- Browser-based mini games  
-- Simulation and interactive logic examples  
-- Projects focused on animation, physics-like behaviors, and user interaction  
-
-### 3. Math-Educational_Tools
+### 2. Math-Educational_Tools
 - Math-related tools and calculators  
 - Educational mini apps and visualizations  
 - Examples designed to support learning and practice  

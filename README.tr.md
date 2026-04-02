@@ -12,12 +12,7 @@ Amaç, modern, pratik ve ölçeklenebilir web uygulamaları geliştirmeyi öğre
 - HTML / CSS / JavaScript alıştırmaları  
 - Basit UI/UX denemeleri ve component fikirleri  
 
-### 2. Games-Simulation
-- Tarayıcı tabanlı mini oyunlar  
-- Simülasyon ve etkileşimli mantık örnekleri  
-- Animasyon, fizik-benzeri davranışlar ve kullanıcı etkileşimi odaklı projeler  
-
-### 3. Math-Educational_Tools
+### 2. Math-Educational_Tools
 - Matematik odaklı araçlar ve hesaplayıcılar  
 - Eğitsel mini uygulamalar ve görselleştirmeler  
 - Öğrenme ve pratik yapmayı destekleyen örnekler  
